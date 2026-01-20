@@ -77,6 +77,31 @@ Rather than relying solely on standard spatial transcriptomics workflows, we lev
 
 **Key Finding:** Acinar cells are the ONLY cell type showing a trending difference between responders and non-responders (2.2x higher in R, p=0.057). This suggests preserved exocrine function may associate with treatment response.
 
+### 6. Cell Type Ratio Analysis (NEW)
+
+Systematic analysis of all pairwise cell type ratios to find combinations that discriminate R vs NR:
+
+| Ratio | R Mean | NR Mean | Fold Δ | MWU p-value |
+|-------|--------|---------|--------|-------------|
+| **Acinar / Low_Confidence** | 0.55 | 0.21 | **2.7x** | **0.057†** |
+| **Acinar / Macrophage** | 1.42 | 0.60 | **2.4x** | **0.057†** |
+| **NK_cells / T_cells** | 0.90 | 0.65 | **1.4x** | **0.057†** |
+
+*Mann-Whitney U test; † p<0.1 (trending)
+
+**Key Finding:** Multiple ratios involving Acinar cells discriminate responders, reinforcing that preserved exocrine tissue architecture is associated with treatment response. The NK/T ratio also suggests different immune balance.
+
+### 7. Non-coding RNA Analysis (NEW)
+
+| ncRNA Class | Detected | Notable Findings |
+|-------------|----------|------------------|
+| LINC (lncRNA) | 26 | LINC02693 consistently UP in R |
+| MIR Host Genes | 8 | Mixed patterns |
+| Antisense | 27 | Regulatory potential |
+| **Total ncRNAs** | **61** | - |
+
+**Key Finding:** LINC02693 shows consistent upregulation in responders across timepoints. Long non-coding RNAs may play regulatory roles in treatment response.
+
 ---
 
 ## Datasets Analyzed
@@ -185,6 +210,14 @@ Day 3: Polymathic Analysis (Cross-Domain)
 *Dedicated analysis of Acinar cell enrichment in responders (MWU p=0.057)*
 ![Acinar Comparison](figures/fig11_acinar_comparison.png)
 
+### Figure 12: Cell Type Ratio Analysis (NEW)
+*Systematic analysis of cell type ratios that discriminate R vs NR*
+![Ratio Analysis](figures/fig12_ratio_analysis.png)
+
+### Figure 13: Non-coding RNA Analysis (NEW)
+*Analysis of lncRNAs and other non-coding transcripts*
+![ncRNA Analysis](figures/fig13_ncrna_analysis.png)
+
 ### G4X Multimodal Analysis
 *Gastric cancer samples with protein-based cell type annotation*
 ![G4X A01](figures/g4x/A01_overview.png)
@@ -198,7 +231,7 @@ Day 3: Polymathic Analysis (Cross-Domain)
 spatial-hackathon-2026-showcase/
 ├── README.md                    # This file
 ├── LICENSE                      # MIT License
-├── figures/                     # Publication-quality figures (11 PDAC + 2 G4X)
+├── figures/                     # Publication-quality figures (13 PDAC + 2 G4X)
 │   ├── fig1_sample_overview.png/pdf
 │   ├── fig2_cell_type_composition.png/pdf
 │   ├── fig3_centrality_analysis.png/pdf
@@ -209,10 +242,14 @@ spatial-hackathon-2026-showcase/
 │   ├── fig8_summary_dashboard.png/pdf
 │   ├── fig9_biomarker_focus.png/pdf
 │   ├── fig10_sample_gallery.png/pdf
+│   ├── fig11_acinar_comparison.png/pdf
+│   ├── fig12_ratio_analysis.png/pdf
+│   ├── fig13_ncrna_analysis.png/pdf
 │   └── g4x/                     # G4X multimodal figures
 ├── data/
 │   └── tables/
 │       ├── mi_vs_response_biomarkers.csv   # Treatment response biomarkers
+│       ├── cell_type_ratio_analysis.csv    # Cell type ratio analysis (NEW)
 │       ├── polymathic_analysis_results.csv # Per-sample results
 │       └── sample_overview_stats.csv       # QC metrics
 ├── scripts/
