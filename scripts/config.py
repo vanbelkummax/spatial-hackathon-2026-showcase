@@ -29,6 +29,14 @@ POLYMATHIC_DIR.mkdir(parents=True, exist_ok=True)
 P_VALUE_CUTOFF = 0.05
 FDR_METHOD = 'fdr_bh'  # Benjamini-Hochberg
 RANDOM_SEED = 42
+
+# Dual statistical testing settings (added 2026-01-20)
+DUAL_STATS = True           # Report both MWU and Welch's t-test
+SHOW_FDR = True             # Show FDR (q-values) alongside raw p-values
+DEEP_DIVE_THRESHOLD = 0.10  # Trigger deep-dive analysis for p < 0.1
+BOOTSTRAP_N = 1000          # Number of bootstrap iterations for CI
+
+# Legacy setting (kept for backward compatibility)
 STATISTICAL_TEST = 'welch'  # 'welch' or 'mwu' - Welch has better power for small n
 
 # =============================================================================

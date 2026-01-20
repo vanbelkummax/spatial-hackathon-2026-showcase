@@ -339,13 +339,62 @@ All findings with p < 0.1 require independent validation in cohorts with **n ≥
 
 ---
 
+## Showcase v2: Dual Statistical Testing & PCA Analyses (NEW)
+
+**Location:** `figures/showcase_v2/`
+
+The v2 figure set introduces rigorous dual statistical testing (MWU + Welch's t-test with FDR correction) and comprehensive PCA analyses.
+
+### Statistical Framework
+
+| Test | Purpose | When Used |
+|------|---------|-----------|
+| **Mann-Whitney U** | Non-parametric | Robust to non-normality |
+| **Welch's t-test** | Parametric | Better power for small n |
+| **FDR (BH)** | Multiple testing | All cell type comparisons |
+
+### New Figures in showcase_v2/
+
+| Figure | Title | Description |
+|--------|-------|-------------|
+| **fig0** | Sample Exclusion Rationale | Documents YP04A exclusion (134 cells after QC) |
+| **fig16** | Bulk RNA PCA | Pseudobulk PCA of top 500 HVGs |
+| **fig17** | Spatial PCA | PCA of spatial and topology features |
+| **fig18** | ncRNA PCA | PCA of non-coding RNA expression |
+| **fig19** | ncRNA Integrated PCA | Combined ncRNA + cell type PCA |
+| **fig20** | Multi-modal PCA | All features: expression + cell types + spatial |
+| **fig21** | Separation Methods | LDA, RF, SVM, Logistic Regression comparison |
+
+### Key Scripts Added
+
+```bash
+scripts/statistical_framework.py  # Dual-test module with FDR
+scripts/fig0_sample_exclusion.py  # Sample exclusion documentation
+scripts/14_pca_analyses.py        # 6 new PCA figures
+scripts/15_figure_orchestrator.py # Figure generation orchestrator
+```
+
+### Sample Exclusion Details (Fig 0)
+
+YP04A was excluded due to insufficient cells for reliable statistical analysis:
+- **Cells before QC:** 1,194
+- **Cells after QC:** 134 (11.2% retention)
+- **Minimum threshold:** 500 cells
+- **Decision:** Excluded to avoid underpowered spatial statistics
+
+---
+
 ## Repository Structure
 
 ```
 spatial-hackathon-2026-showcase/
 ├── README.md                    # This file
 ├── LICENSE                      # MIT License
-├── figures/                     # Publication-quality figures (13 PDAC + 2 G4X)
+├── figures/                     # Publication-quality figures (19 PDAC + 2 G4X)
+│   ├── showcase_v2/             # NEW: Dual stats + PCA figures (20 figures)
+│   │   ├── fig0_sample_exclusion.png/pdf    # Sample exclusion rationale
+│   │   ├── fig16-21_*.png/pdf               # PCA analyses
+│   │   └── FIGURE_MANIFEST.txt              # Figure summary
 │   ├── fig1_sample_overview.png/pdf
 │   ├── fig2_cell_type_composition.png/pdf
 │   ├── fig3_centrality_analysis.png/pdf

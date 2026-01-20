@@ -1,0 +1,91 @@
+======================================================================
+FIGURE GENERATION SUMMARY REPORT
+Generated: 2026-01-20 08:30:56
+======================================================================
+
+SUMMARY:
+  Total figures: 22
+  PNG files: 17/22
+  PDF files: 17/22
+  Total size: 18.11 MB
+
+
+METHODOLOGY
+----------------------------------------
+  [OK     ] fig0_sample_exclusion
+           Sample Exclusion Rationale: Documents YP04A exclusion due to low cell count after QC
+           Size: 670.2KB
+
+TRADITIONAL
+----------------------------------------
+  [OK     ] fig1_sample_overview
+           Sample Overview Grid: Spatial plots of all PDAC samples with cell types
+           Size: 2151.1KB
+  [OK     ] fig2_cell_type_composition
+           Cell Type Composition: Cell type proportions by response group
+           Size: 508.2KB
+
+SIGNIFICANT FINDINGS
+----------------------------------------
+  [OK     ] fig3_centrality_analysis
+           Centrality Analysis: Betweenness centrality comparison R vs NR
+           Size: 541.2KB
+  [OK     ] fig4_spatial_hub_cells
+           Spatial Hub Cells: Spatial distribution of hub cells
+           Size: 4187.4KB
+  [OK     ] fig5_persistent_homology
+           Persistent Homology: Topological features comparison
+           Size: 675.6KB
+  [OK     ] fig6_betti_curves
+           Betti Curves: Betti number curves by response
+           Size: 851.0KB
+
+OTHER ANALYSES
+----------------------------------------
+  [MISSING] fig7_spatial_entropy
+           Spatial Entropy: Spatial entropy distribution
+  [MISSING] fig8_mi_biomarkers
+           MI Biomarkers: Mutual information biomarker discovery
+  [MISSING] fig9_treatment_response
+           Treatment Response Biomarkers: Top biomarkers for treatment response
+  [OK     ] fig10_sample_gallery
+           Sample Gallery: Gallery of all samples with QC metrics
+           Size: 2421.6KB
+  [OK     ] fig11_acinar_comparison
+           Acinar Cell Comparison: Acinar cell proportions by response
+           Size: 871.4KB
+  [OK     ] fig12_ratio_analysis
+           Cell Type Ratio Analysis: Cell type ratio comparisons
+           Size: 977.4KB
+  [OK     ] fig13_ncrna_analysis
+           ncRNA Analysis: Non-coding RNA analysis
+           Size: 745.7KB
+  [MISSING] fig14_deconvolution
+           Deconvolution Analysis: Cell type deconvolution results
+  [MISSING] fig15_ligrec
+           Ligand-Receptor Communication: Cell-cell communication analysis
+
+PCA ANALYSIS (NEW)
+----------------------------------------
+  [OK     ] fig16_bulk_rna_pca
+           Bulk RNA PCA: Pseudobulk PCA of top 500 HVGs
+           Size: 320.1KB
+  [OK     ] fig17_spatial_pca
+           Spatial PCA: PCA of spatial and topology features
+           Size: 534.7KB
+  [OK     ] fig18_ncrna_pca
+           ncRNA PCA: PCA of non-coding RNA expression
+           Size: 298.7KB
+  [OK     ] fig19_ncrna_integrated_pca
+           ncRNA Integrated PCA: Integrated ncRNA and cell type PCA
+           Size: 332.7KB
+  [OK     ] fig20_multimodal_pca
+           Multi-modal Integrated PCA: All features combined: expression + cell types + spatial
+           Size: 493.1KB
+  [OK     ] fig21_separation_methods
+           Separation Methods Comparison: Comparison of PCA, LDA, RF, SVM for R vs NR
+           Size: 591.9KB
+
+======================================================================
+Output directory: /home/user/spatial-hackathon-2026/outputs/figures/showcase_v2
+======================================================================
