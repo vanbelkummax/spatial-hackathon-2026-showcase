@@ -102,6 +102,22 @@ Systematic analysis of all pairwise cell type ratios to find combinations that d
 
 **Key Finding:** LINC02693 shows consistent upregulation in responders across timepoints. Long non-coding RNAs may play regulatory roles in treatment response.
 
+### 8. Day 4: Spatial Entropy Analysis (NEW)
+
+| Metric | Responders | Non-Responders | p-value |
+|--------|------------|----------------|---------|
+| Global Spatial Entropy | 1.954 | 1.819 | 0.114 |
+
+**Key Finding:** Responders show higher spatial entropy (more mixed tissue architecture), suggesting heterogeneous cell mixing may facilitate treatment response.
+
+### 9. Day 4: L-R Communication (NEW)
+
+| Metric | Responders | Non-Responders | Difference |
+|--------|------------|----------------|------------|
+| Significant L-R Interactions | 84.0 | 93.7 | -10% |
+
+**Key Finding:** Non-responders have MORE ligand-receptor interactions (93.7 vs 84.0), suggesting more established communication networks may correlate with treatment resistance.
+
 ---
 
 ## Datasets Analyzed
@@ -266,6 +282,32 @@ With **n=4 responders** and **n=3 non-responders** (7 samples total), statistica
 *Analysis of lncRNAs and other non-coding transcripts*
 ![ncRNA Analysis](figures/fig13_ncrna_analysis.png)
 
+### Day 4: Polymath-Driven Hypothesis Testing (NEW)
+
+### Figure 14: Deconvolution Analysis
+*Signature-based cell type deconvolution for Visium spots*
+![Deconvolution](figures/fig14_deconvolution_overview.png)
+
+### Figure 15: CAF Subtype Analysis
+*iCAF vs mCAF scoring from Polymath KB markers*
+![CAF Subtypes](figures/fig15_day4_hypotheses.png)
+
+### Figure 16: Metabolic Pathway Analysis
+*MPC/Pyruvate, Glycolysis, OxPhos, Fatty Acid pathways*
+![Metabolic Analysis](figures/fig16_metabolic_analysis.png)
+
+### Figure 17: Spatial Entropy Heatmap
+*Shannon entropy of cell type distributions across samples*
+![Entropy Heatmap](figures/fig17_entropy_heatmap.png)
+
+### Figure 18: L-R Communication Summary
+*Ligand-receptor interaction analysis comparing R vs NR*
+![L-R Summary](figures/fig18_ligrec_summary.png)
+
+### Figure 19: L-R Interaction Heatmap
+*Top ligand-receptor pairs across all samples*
+![L-R Heatmap](figures/fig19_ligrec_heatmap.png)
+
 ### G4X Multimodal Analysis
 *Gastric cancer samples with protein-based cell type annotation*
 ![G4X A01](figures/g4x/A01_overview.png)
@@ -293,6 +335,12 @@ spatial-hackathon-2026-showcase/
 │   ├── fig11_acinar_comparison.png/pdf
 │   ├── fig12_ratio_analysis.png/pdf
 │   ├── fig13_ncrna_analysis.png/pdf
+│   ├── fig14_deconvolution_overview.png/pdf    # Day 4
+│   ├── fig15_day4_hypotheses.png/pdf           # Day 4
+│   ├── fig16_metabolic_analysis.png/pdf        # Day 4
+│   ├── fig17_entropy_heatmap.png/pdf           # Day 4
+│   ├── fig18_ligrec_summary.png/pdf            # Day 4
+│   ├── fig19_ligrec_heatmap.png/pdf            # Day 4
 │   └── g4x/                     # G4X multimodal figures
 ├── data/
 │   └── tables/
@@ -427,4 +475,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 *Generated using Polymath v4 RRF search (lexical + semantic + Neo4j graph)*
 *Algorithm Registry: 50,528 algorithms across 15+ domains with spatial biology applications*
-*Last updated: 2026-01-19*
+*Last updated: 2026-01-20*
