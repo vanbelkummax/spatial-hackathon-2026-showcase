@@ -26,14 +26,14 @@ Rather than relying solely on standard spatial transcriptomics workflows, we lev
 
 | Metric | Responders | Non-Responders | Change | p-value |
 |--------|------------|----------------|--------|---------|
-| Mean Betweenness | 0.0091 | 0.0047 | **+96%** | 0.029* |
-| Mean PageRank | 0.00081 | 0.00091 | -12% | 0.343 |
-| Betti-0 AUC | 765.8 | 629.2 | +22% | 0.114 |
-| Betti-1 AUC | 787.4 | 628.7 | **+25%** | 0.057 |
+| Mean Betweenness | 0.0091 | 0.0047 | **+96%** | 0.24 (ns) |
+| Mean PageRank | 0.00081 | 0.00091 | -12% | 0.34 (ns) |
+| Betti-0 AUC | 765.8 | 629.2 | +22% | 0.11 (ns) |
+| Betti-1 AUC | 787.4 | 628.7 | **+25%** | 0.53 (ns) |
 
-*Welch's t-test, *p<0.05
+*Welch's t-test; ns = not significant (p ≥ 0.1)*
 
-**Key Finding:** Responders show significantly higher betweenness centrality (+96%, p=0.029), indicating more interconnected tissue architecture with cells serving as critical communication bridges.
+**Key Finding:** Responders showed higher mean betweenness centrality (+96% effect size, p=0.24), suggesting more interconnected tissue architecture. While not statistically significant with n=7 samples, this large effect warrants validation in larger cohorts.
 
 ### 2. Hub Cell Types Differ by Response
 
@@ -46,7 +46,7 @@ Rather than relying solely on standard spatial transcriptomics workflows, we lev
 
 ### 3. Treatment Response Biomarkers (MI-based Discovery)
 
-**NEW: Cross-sample mutual information analysis against R/NR status (8,925 cells pooled)**
+**Cross-sample mutual information analysis against R/NR status (n=7 samples, pseudobulk aggregation of 8,925 cells)**
 
 | Rank | Gene | MI Score | Biological Function |
 |------|------|----------|---------------------|
@@ -61,35 +61,35 @@ Rather than relying solely on standard spatial transcriptomics workflows, we lev
 ### 4. Topological Data Analysis Results
 
 **Persistent Homology (from Algebraic Topology):**
-- H0 (connected components): R samples show +22% higher AUC
-- H1 (holes/voids): R samples show +25% higher AUC (p=0.057)
-- **Interpretation:** Responder tissues have more complex spatial architecture with more "holes" potentially facilitating drug penetration and immune cell access
+- H0 (connected components): R samples show +22% higher AUC (p=0.11, ns)
+- H1 (holes/voids): R samples show +25% higher AUC (p=0.53, ns)
+- **Interpretation:** Responder tissues showed higher topological complexity (larger effect sizes), though not statistically significant at n=7. The trend toward more "holes" in responder tissue is an exploratory finding requiring validation.
 
 ### 5. Cell Type Composition (Mann-Whitney U)
 
-| Cell Type | R Mean% | NR Mean% | Effect | p-value |
-|-----------|---------|----------|--------|---------|
-| **Acinar** | 6.4% | 2.9% | **+3.5%** | **0.057†** |
-| Ductal_Epithelial | 10.7% | 15.6% | -4.9% | 0.229 |
-| NK_cells | 7.4% | 4.9% | +2.5% | 0.229 |
+| Cell Type | R Mean% | NR Mean% | Effect | p-value | FDR q |
+|-----------|---------|----------|--------|---------|-------|
+| **Acinar** | 6.4% | 2.9% | **+3.5%** | 0.057 | 0.74 |
+| Ductal_Epithelial | 10.7% | 15.6% | -4.9% | 0.23 | 0.74 |
+| NK_cells | 7.4% | 4.9% | +2.5% | 0.23 | 0.74 |
 
-*Welch's t-test; † p<0.1 (trending)
+*Mann-Whitney U test with Benjamini-Hochberg FDR correction*
 
-**Key Finding:** Acinar cells are the ONLY cell type showing a trending difference between responders and non-responders (2.2x higher in R, p=0.057). This suggests preserved exocrine function may associate with treatment response.
+**Key Finding:** Acinar cells showed the largest difference between responders and non-responders (2.2x higher in R, p=0.057, q=0.74). While not significant after multiple testing correction, this exploratory finding suggests preserved exocrine function may associate with treatment response.
 
 ### 6. Cell Type Ratio Analysis (NEW)
 
 Systematic analysis of all pairwise cell type ratios to find combinations that discriminate R vs NR:
 
-| Ratio | R Mean | NR Mean | Fold Δ | MWU p-value |
-|-------|--------|---------|--------|-------------|
-| **Acinar / Low_Confidence** | 0.55 | 0.21 | **2.7x** | **0.057†** |
-| **Acinar / Macrophage** | 1.42 | 0.60 | **2.4x** | **0.057†** |
-| **NK_cells / T_cells** | 0.90 | 0.65 | **1.4x** | **0.057†** |
+| Ratio | R Mean | NR Mean | Fold Δ | MWU p-value | FDR q |
+|-------|--------|---------|--------|-------------|-------|
+| **Acinar / Low_Confidence** | 0.38 | 0.13 | **2.8x** | 0.057 | 0.74 |
+| **Acinar / Macrophage** | 0.80 | 0.30 | **2.6x** | 0.057 | 0.74 |
+| **NK_cells / T_cells** | 1.08 | 0.76 | **1.4x** | 0.057 | 0.74 |
 
-*Welch's t-test; † p<0.1 (trending)
+*Mann-Whitney U test with Benjamini-Hochberg FDR correction. All FDR q-values = 0.74, indicating these are exploratory findings.*
 
-**Key Finding:** Multiple ratios involving Acinar cells discriminate responders, reinforcing that preserved exocrine tissue architecture is associated with treatment response. The NK/T ratio also suggests different immune balance.
+**Key Finding:** Multiple ratios involving Acinar cells showed large effect sizes in responders. While raw p-values reach the MWU floor (0.057 with n=7), FDR-corrected q-values are 0.74, indicating these are hypothesis-generating findings requiring validation.
 
 ### 7. Non-coding RNA Analysis (NEW)
 
@@ -211,20 +211,44 @@ With **n=4 responders** and **n=3 non-responders** (7 samples total), statistica
 
 ### Interpretation Guidelines
 
-⚠️ **All findings with p < 0.1 are HYPOTHESIS-GENERATING** and require validation in larger cohorts.
+⚠️ **All findings are HYPOTHESIS-GENERATING** and require validation in larger cohorts.
 
 | Symbol | Meaning | Interpretation |
 |--------|---------|----------------|
-| * | p < 0.05 | Nominally significant |
-| † | p < 0.1 | Trending |
 | ns | p ≥ 0.1 | Not significant |
+| (exploratory) | Large effect, p > 0.1 | Promising but underpowered |
+
+*Note: With n=7 samples, no comparisons achieved statistical significance after correction.*
 
 ### What We Can Conclude
 
-✅ **Can say:** "We observed X difference between R and NR (p=Y)"
+✅ **Can say:** "We observed X difference between R and NR (effect size = Y)"
 ✅ **Can say:** "This finding warrants validation in larger cohorts"
-❌ **Cannot say:** "Treatment responders definitely have more X"
+❌ **Cannot say:** "Treatment responders have significantly more X"
 ❌ **Cannot say:** "X is a validated biomarker"
+
+---
+
+## Critical Statistical Limitations
+
+> **⚠️ All findings are HYPOTHESIS-GENERATING, not confirmatory.**
+
+With n=4 Responders and n=3 Non-Responders:
+- **Minimum achievable Mann-Whitney U p-value: 0.0571** (cannot reach p<0.05)
+- **All FDR-adjusted q-values: 0.74-0.75** (no significance after multiple testing correction)
+- **Statistical power for moderate effects: ~8-20%** (underpowered by definition)
+
+### What This Means
+
+| Finding Type | Status | Interpretation |
+|--------------|--------|----------------|
+| **Effect sizes** | ✅ Valid | +96% betweenness, +25% Betti-1 are real observed differences |
+| **P-values** | ⚠️ Underpowered | Cannot distinguish signal from noise at n=7 |
+| **FDR q-values** | ⚠️ Not significant | All q ≥ 0.74 after Benjamini-Hochberg correction |
+
+### Validation Requirements
+
+All findings with p < 0.1 require independent validation in cohorts with **n ≥ 20 per group** to achieve adequate statistical power.
 
 ---
 
