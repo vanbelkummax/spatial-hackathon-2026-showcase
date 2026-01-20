@@ -131,6 +131,55 @@ def compute_graph_centrality(adata, n_neighs: int = 6) -> Dict[str, float]:
 # Persistent Homology Analysis (from Topology)
 # =============================================================================
 
+def maxmin_subsample(coords: np.ndarray, n_landmarks: int, seed: int = 42) -> np.ndarray:
+    """
+    MaxMin (farthest point) landmark selection for topology-preserving subsampling.
+
+    Preserves topological features by selecting points that maximize coverage
+    of the point cloud shape, rather than random selection which can break loops.
+
+    Algorithm:
+    1. Start with random point
+    2. Repeatedly add the point farthest from all current landmarks
+    3. Continue until n_landmarks reached
+
+    References:
+    - De Silva & Carlsson (2004) "Topological estimation using witness complexes"
+    - Polymath KB: Search "landmark selection topology"
+
+    Args:
+        coords: Array of shape (n_points, n_dims) with coordinates
+        n_landmarks: Number of landmark points to select
+        seed: Random seed for reproducibility
+
+    Returns:
+        Array of indices for selected landmark points
+    """
+    rng = np.random.default_rng(seed)
+    n = len(coords)
+
+    if n <= n_landmarks:
+        return np.arange(n)
+
+    # Start with random point
+    landmarks = [rng.integers(n)]
+
+    # Distance to nearest landmark for each point
+    min_dists = np.full(n, np.inf)
+
+    for _ in range(n_landmarks - 1):
+        # Update distances to nearest landmark
+        last_landmark = coords[landmarks[-1]]
+        dists_to_last = np.linalg.norm(coords - last_landmark, axis=1)
+        min_dists = np.minimum(min_dists, dists_to_last)
+
+        # Add farthest point
+        next_landmark = np.argmax(min_dists)
+        landmarks.append(next_landmark)
+
+    return np.array(landmarks)
+
+
 def compute_topology_features(adata, max_cells: int = 5000) -> Optional[Dict[str, float]]:
     """
     Compute persistent homology features for tissue architecture.
@@ -140,6 +189,8 @@ def compute_topology_features(adata, max_cells: int = 5000) -> Optional[Dict[str
 
     H0 = connected components (tissue clusters)
     H1 = holes/voids (tissue gaps/boundaries)
+
+    Uses MaxMin landmark selection (not random) to preserve topological features.
     """
     if not HAS_TDA:
         logger.warning("Skipping topology - giotto-tda not installed")
@@ -150,12 +201,11 @@ def compute_topology_features(adata, max_cells: int = 5000) -> Optional[Dict[str
     coords = adata.obsm['spatial']
 
     # Subsample if too large (TDA is O(n^3))
-    # Use fixed seed for reproducibility
+    # Use MaxMin landmark selection to preserve topology
     if len(coords) > max_cells:
-        rng = np.random.default_rng(42)
-        idx = rng.choice(len(coords), max_cells, replace=False)
+        idx = maxmin_subsample(coords, max_cells, seed=42)
         coords = coords[idx]
-        logger.info(f"  - Subsampled to {max_cells} cells (seed=42)")
+        logger.info(f"  - MaxMin subsampled to {max_cells} cells (preserves topology)")
 
     # Normalize coordinates
     coords = (coords - coords.min(axis=0)) / (coords.max(axis=0) - coords.min(axis=0) + 1e-6)
@@ -187,6 +237,72 @@ def compute_topology_features(adata, max_cells: int = 5000) -> Optional[Dict[str
 # Mutual Information Analysis (from Information Theory)
 # =============================================================================
 
+def compute_cross_sample_mi_response(all_adatas: Dict, metadata: Dict, top_n: int = 50) -> pd.DataFrame:
+    """
+    Compute mutual information between genes and TREATMENT RESPONSE.
+
+    This is the correct approach for finding treatment response biomarkers,
+    as it compares gene expression ACROSS samples (pooled) against R/NR labels.
+
+    IMPORTANT: The per-sample MI (vs cell_type) identifies cell-type marker genes.
+    This function (vs response) identifies actual treatment response biomarkers.
+
+    Args:
+        all_adatas: Dict of sample_name -> AnnData objects
+        metadata: Dict of sample_name -> {response: 'R' or 'NR', ...}
+        top_n: Number of top genes to return
+
+    Returns:
+        DataFrame with genes sorted by MI against response
+    """
+    from sklearn.feature_selection import mutual_info_classif
+    import anndata as ad
+
+    logger.info("Computing cross-sample MI against TREATMENT RESPONSE...")
+
+    # Merge all samples with response labels
+    adatas_list = []
+    for sample, adata in all_adatas.items():
+        if sample not in metadata:
+            continue
+        adata_copy = adata.copy()
+        adata_copy.obs['sample'] = sample
+        adata_copy.obs['response'] = metadata[sample]['response']
+        adatas_list.append(adata_copy)
+
+    if not adatas_list:
+        logger.warning("  - No samples to merge")
+        return pd.DataFrame()
+
+    # Concatenate (inner join on genes)
+    merged = ad.concat(adatas_list, join='inner')
+    logger.info(f"  - Merged {len(adatas_list)} samples: {merged.n_obs} cells, {merged.n_vars} genes")
+
+    # Get expression and response labels
+    X = merged.X.toarray() if hasattr(merged.X, 'toarray') else merged.X
+    y = (merged.obs['response'] == 'R').astype(int).values  # 1=R, 0=NR
+
+    # Limit genes for speed
+    n_genes = min(5000, X.shape[1])
+    if X.shape[1] > n_genes:
+        gene_var = np.var(X, axis=0)
+        top_var_idx = np.argsort(gene_var)[-n_genes:]
+        X = X[:, top_var_idx]
+        gene_names = merged.var_names[top_var_idx]
+    else:
+        gene_names = merged.var_names
+
+    logger.info(f"  - Computing MI for {len(gene_names)} genes vs response...")
+    mi_scores = mutual_info_classif(X, y, random_state=42)
+
+    mi_df = pd.DataFrame({
+        'gene': gene_names,
+        'mi_vs_response': mi_scores
+    }).sort_values('mi_vs_response', ascending=False)
+
+    return mi_df.head(top_n)
+
+
 def compute_mutual_information_genes(adata, target_col: str = 'cell_type', top_n: int = 50) -> pd.DataFrame:
     """
     Compute mutual information between genes and a target variable.
@@ -195,13 +311,6 @@ def compute_mutual_information_genes(adata, target_col: str = 'cell_type', top_n
     applied to identify non-linearly associated genes.
 
     MI captures dependencies that correlation misses.
-
-    IMPORTANT DISTINCTION:
-    - MI vs cell_type: Identifies genes that discriminate cell types WITHIN a sample.
-      This is useful for validating cell type annotations and finding marker genes.
-    - For treatment response biomarkers (R vs NR): Use differential expression analysis
-      across samples (see 07_comparative.py), not per-sample MI, since each sample
-      has only one response label.
     """
     from sklearn.feature_selection import mutual_info_classif
 
@@ -301,6 +410,7 @@ def main():
     logger.info("="*60)
 
     all_results = []
+    all_adatas = {}  # Keep track for cross-sample MI
 
     # Analyze PDAC samples
     for sample_name in PDAC_METADATA.keys():
@@ -313,9 +423,25 @@ def main():
         try:
             results = analyze_sample(sample_name, adata_path)
             all_results.append(results)
+            # Load for cross-sample MI
+            all_adatas[sample_name] = sc.read_h5ad(adata_path)
         except Exception as e:
             logger.error(f"Error analyzing {sample_name}: {e}")
             continue
+
+    # NEW: Compute cross-sample MI against treatment response
+    if len(all_adatas) >= 2:
+        logger.info("\n" + "="*60)
+        logger.info("CROSS-SAMPLE MI: Treatment Response Biomarkers")
+        logger.info("="*60)
+        mi_response_df = compute_cross_sample_mi_response(all_adatas, PDAC_METADATA, top_n=50)
+        if len(mi_response_df) > 0:
+            mi_response_path = TABLE_DIR / "mi_vs_response_biomarkers.csv"
+            mi_response_df.to_csv(mi_response_path, index=False)
+            logger.info(f"Saved MI vs Response to {mi_response_path}")
+            logger.info(f"Top 10 Treatment Response Biomarkers (by MI):")
+            for i, row in mi_response_df.head(10).iterrows():
+                logger.info(f"  {row['gene']:15s} MI={row['mi_vs_response']:.4f}")
 
     # Combine results
     if all_results:

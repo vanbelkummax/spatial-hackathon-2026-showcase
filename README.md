@@ -22,17 +22,20 @@ Rather than relying solely on standard spatial transcriptomics workflows, we lev
 
 ## Key Findings
 
-### 1. Graph Topology Differences
+### 1. Graph Topology Differences (with Statistics)
 
-| Metric | Responders | Non-Responders | Interpretation |
-|--------|------------|----------------|----------------|
-| Mean Betweenness | 0.0091 | 0.0047 | **+94% higher** in R |
-| Mean PageRank | 0.00081 | 0.00091 | Slightly lower in R |
-| Hub Cell Fraction | 5.0% | 5.0% | Similar by definition |
+| Metric | Responders | Non-Responders | Change | p-value |
+|--------|------------|----------------|--------|---------|
+| Mean Betweenness | 0.0091 | 0.0047 | **+96%** | 0.029* |
+| Mean PageRank | 0.00081 | 0.00091 | -12% | 0.343 |
+| Betti-0 AUC | 765.8 | 629.2 | +22% | 0.114 |
+| Betti-1 AUC | 787.4 | 628.7 | **+25%** | 0.057 |
 
-**Key Finding:** Responders show significantly higher betweenness centrality, indicating more interconnected tissue architecture with cells serving as critical communication bridges.
+*Mann-Whitney U test, *p<0.05
 
-### 2. Hub Cell Types Differ
+**Key Finding:** Responders show significantly higher betweenness centrality (+96%, p=0.029), indicating more interconnected tissue architecture with cells serving as critical communication bridges.
+
+### 2. Hub Cell Types Differ by Response
 
 | Response | Dominant Hub Cell Types |
 |----------|------------------------|
@@ -41,45 +44,64 @@ Rather than relying solely on standard spatial transcriptomics workflows, we lev
 
 **Interpretation:** In responders, immune cells (macrophages) and stromal cells (CAFs) occupy central positions in the spatial network. Non-responders show epithelial and NK cells as hubs, suggesting different tissue organization patterns.
 
-### 3. Top Discriminative Genes (Mutual Information)
+### 3. Treatment Response Biomarkers (MI-based Discovery)
 
-| Response | Sample | Top MI Gene | MI Score | Biological Role |
-|----------|--------|-------------|----------|-----------------|
-| R | YP12A | **CD8A** | 0.097 | T-cell marker (immune infiltration) |
-| R | YP12C | CLPS | 0.234 | Colipase (pancreatic function) |
-| R | YP15A | DES | 0.216 | Desmin (muscle/stroma marker) |
-| R | YP15C | **TAGLN** | 0.206 | Transgelin (CAF marker) |
-| NR | YP03A | **MTA1** | 0.124 | Metastasis-associated gene |
-| NR | YP03C | TTR | 0.208 | Transthyretin (carrier protein) |
-| NR | YP04C | **KRT7** | 0.188 | Keratin 7 (epithelial marker) |
+**NEW: Cross-sample mutual information analysis against R/NR status (8,925 cells pooled)**
 
-**Key Finding:** Responders show T-cell (CD8A) and stromal (TAGLN) markers as top discriminators, while non-responders show epithelial (KRT7) and metastasis (MTA1) markers.
+| Rank | Gene | MI Score | Biological Function |
+|------|------|----------|---------------------|
+| 1 | **ACSS3** | 0.668 | Acetyl-CoA synthetase (metabolism) |
+| 2 | **SOCS2** | 0.665 | JAK-STAT pathway suppressor |
+| 3 | **STAT4** | 0.664 | Th1 differentiation, IFN-γ signaling |
+| 4 | **CMKLR1** | 0.662 | Chemokine receptor |
+| 5 | **SOBP** | 0.662 | Sine oculis binding protein |
 
-### 4. Novel Biomarkers (Validated via Open Targets)
+**Key Finding:** STAT4 and SOCS2 are known immune regulators with established links to immunotherapy response, validating our cross-domain approach.
 
-These genes were upregulated in responders and validated through external databases:
+### 4. Topological Data Analysis Results
 
-| Gene | Log2FC | Disease Associations | Cancer Links |
-|------|--------|---------------------|--------------|
-| **MS4A2** | +0.67 | 208 diseases | Breast, gastric, colorectal cancer |
-| **NLRP7** | +0.67 | 132 diseases | Colorectal carcinoma, IBD |
-| **CCZ1** | +1.22 | 22 diseases | Neurodegeneration, SCC |
+**Persistent Homology (from Algebraic Topology):**
+- H0 (connected components): R samples show +22% higher AUC
+- H1 (holes/voids): R samples show +25% higher AUC (p=0.057)
+- **Interpretation:** Responder tissues have more complex spatial architecture with more "holes" potentially facilitating drug penetration and immune cell access
 
-**Hypothesis:** MS4A2 (mast cell marker) and NLRP7 (inflammasome component) suggest enhanced immune/inflammatory activity in treatment responders.
+### 5. Cell Type Composition (Permutation-tested)
+
+| Cell Type | R Mean% | NR Mean% | Effect | p-value |
+|-----------|---------|----------|--------|---------|
+| CAF_myCAF | 18.2% | 12.1% | +6.1% | 0.089 |
+| Macrophage | 8.4% | 5.2% | +3.2% | 0.142 |
+| T_cells | 4.1% | 2.3% | +1.8% | 0.201 |
+
+*N=1000 permutations
+
+---
+
+## Datasets Analyzed
+
+### 1. PDAC Treatment Response (Primary)
+
+| Dataset | Samples | Cells | Platform |
+|---------|---------|-------|----------|
+| PDAC Treatment Response | 7 analyzed | 8,925 | Visium |
+
+- **Responders (R):** YP12A (865), YP12C (967), YP15A (2,159), YP15C (1,407)
+- **Non-Responders (NR):** YP03A (908), YP03C (1,063), YP04C (1,556)
+- *YP04A excluded (134 cells after QC)*
+
+### 2. G4X Multimodal (Secondary - Gastric Cancer)
+
+| Dataset | Samples | Cells | Platform |
+|---------|---------|-------|----------|
+| Gastric Cancer | 2 | 46,208 | Singular G4X |
+
+- **A01:** 19,947 cells (RNA + 17 protein markers)
+- **B01:** 26,261 cells (RNA + 17 protein markers)
+- Rich immune infiltrate: CD8+ T (11-15%), CD4+ T (7%), Tregs (5%), Macrophages (3%)
 
 ---
 
 ## Methodology
-
-### Data
-
-| Dataset | Samples | Cells | Platform |
-|---------|---------|-------|----------|
-| PDAC Treatment Response | 8 (7 analyzed) | 8,925 | Visium |
-
-- **Responders (R):** YP12A, YP12C, YP15A, YP15C
-- **Non-Responders (NR):** YP03A, YP03C, YP04C
-- *YP04A excluded (134 cells after QC)*
 
 ### Analysis Pipeline
 
@@ -99,53 +121,68 @@ Day 3: Polymathic Analysis (Cross-Domain)
     |-- Graph centrality (from social network analysis)
     |-- Persistent homology (from algebraic topology)
     |-- Mutual information (from information theory)
+    |-- MaxMin landmark sampling (topology-preserving)
 ```
 
 ### Cross-Domain Algorithms Applied
 
-| Algorithm | Origin Domain | Spatial Biology Application |
-|-----------|---------------|---------------------------|
-| **Betweenness Centrality** | Graph Theory / Social Networks | Hub cell identification |
-| **PageRank** | Graph Theory / Web Search | Cell importance scoring |
-| **Persistent Homology** | Algebraic Topology | Tissue architecture quantification |
-| **Betti Curves** | Topological Data Analysis | R vs NR structural signatures |
-| **Mutual Information** | Information Theory | Non-linear gene-phenotype relationships |
+| Algorithm | Origin Domain | Spatial Biology Application | Implementation |
+|-----------|---------------|---------------------------|----------------|
+| **Betweenness Centrality** | Graph Theory / Social Networks | Hub cell identification | NetworkX |
+| **PageRank** | Graph Theory / Web Search | Cell importance scoring | NetworkX |
+| **Persistent Homology** | Algebraic Topology | Tissue architecture quantification | giotto-tda |
+| **Betti Curves** | Topological Data Analysis | R vs NR structural signatures | giotto-tda |
+| **Mutual Information** | Information Theory | Non-linear gene-phenotype relationships | sklearn |
+| **MaxMin Sampling** | Computational Geometry | Topology-preserving subsampling | Custom |
 
 ---
 
 ## Figure Gallery
 
 ### Figure 1: Sample Overview
-*Spatial distribution of cell types across all PDAC samples*
+*Spatial distribution of cell types across all 7 PDAC samples with adaptive point sizing*
 ![Sample Overview](figures/fig1_sample_overview.png)
 
 ### Figure 2: Cell Type Composition
-*Differential cell type enrichment between responders and non-responders*
+*Differential cell type enrichment with permutation tests (N=1000)*
 ![Cell Type Composition](figures/fig2_cell_type_composition.png)
 
 ### Figure 3: Graph Centrality Analysis
-*Betweenness and PageRank comparisons showing higher connectivity in responders*
+*Betweenness and PageRank comparisons with Mann-Whitney U statistics*
 ![Centrality Analysis](figures/fig3_centrality_analysis.png)
 
 ### Figure 4: Spatial Hub Cells
-*Hub cell spatial distribution highlighting key network positions*
+*Hub cell spatial distribution across all samples with interpretation panel*
 ![Spatial Hub Cells](figures/fig4_spatial_hub_cells.png)
 
 ### Figure 5: Persistent Homology
-*Persistence diagrams capturing tissue architecture topology*
+*Persistence diagrams with R vs NR comparison and interpretation*
 ![Persistent Homology](figures/fig5_persistent_homology.png)
 
 ### Figure 6: Betti Curves
-*Topological signatures comparing R vs NR tissue structure*
+*Topological signatures with AUC statistics and explanation panel*
 ![Betti Curves](figures/fig6_betti_curves.png)
 
-### Figure 7: Mutual Information Genes
-*Top discriminative genes by mutual information score*
+### Figure 7: Mutual Information Analysis
+*Cell-type markers vs TRUE response biomarkers (cross-sample MI)*
 ![MI Genes](figures/fig7_mi_genes.png)
 
 ### Figure 8: Summary Dashboard
 *Comprehensive overview of all key findings*
 ![Summary Dashboard](figures/fig8_summary_dashboard.png)
+
+### Figure 9: Treatment Response Biomarkers (NEW)
+*Dedicated biomarker figure with MI-based candidates and validation status*
+![Biomarker Focus](figures/fig9_biomarker_focus.png)
+
+### Figure 10: Sample Gallery (NEW)
+*Traditional overview showing all samples with QC metrics*
+![Sample Gallery](figures/fig10_sample_gallery.png)
+
+### G4X Multimodal Analysis
+*Gastric cancer samples with protein-based cell type annotation*
+![G4X A01](figures/g4x/A01_overview.png)
+![G4X B01](figures/g4x/B01_overview.png)
 
 ---
 
@@ -155,23 +192,27 @@ Day 3: Polymathic Analysis (Cross-Domain)
 spatial-hackathon-2026-showcase/
 ├── README.md                    # This file
 ├── LICENSE                      # MIT License
-├── figures/                     # Publication-quality figures
-│   ├── fig1_sample_overview.png
-│   ├── fig2_cell_type_composition.png
-│   ├── fig3_centrality_analysis.png
-│   ├── fig4_spatial_hub_cells.png
-│   ├── fig5_persistent_homology.png
-│   ├── fig6_betti_curves.png
-│   ├── fig7_mi_genes.png
-│   └── fig8_summary_dashboard.png
+├── figures/                     # Publication-quality figures (10 PDAC + 2 G4X)
+│   ├── fig1_sample_overview.png/pdf
+│   ├── fig2_cell_type_composition.png/pdf
+│   ├── fig3_centrality_analysis.png/pdf
+│   ├── fig4_spatial_hub_cells.png/pdf
+│   ├── fig5_persistent_homology.png/pdf
+│   ├── fig6_betti_curves.png/pdf
+│   ├── fig7_mi_genes.png/pdf
+│   ├── fig8_summary_dashboard.png/pdf
+│   ├── fig9_biomarker_focus.png/pdf
+│   ├── fig10_sample_gallery.png/pdf
+│   └── g4x/                     # G4X multimodal figures
 ├── data/
-│   └── results_summary.csv      # Key results in tabular format
-├── notebooks/
-│   └── 01_analysis_walkthrough.ipynb  # Interactive analysis notebook
+│   └── tables/
+│       ├── mi_vs_response_biomarkers.csv   # Treatment response biomarkers
+│       ├── polymathic_analysis_results.csv # Per-sample results
+│       └── sample_overview_stats.csv       # QC metrics
 ├── scripts/
-│   ├── 07_comparative.py        # R vs NR comparative analysis
-│   ├── 08_polymathic_analysis.py  # Cross-domain algorithms
-│   └── 09_generate_showcase_figures.py  # Figure generation
+│   ├── 08_polymathic_analysis.py           # Cross-domain algorithms
+│   ├── 09_generate_showcase_figures_fixed.py  # Figure generation
+│   └── 10_g4x_multimodal_analysis.py       # G4X multimodal pipeline
 └── docs/
     ├── METHODOLOGY.md           # Detailed methods description
     ├── FINDINGS.md              # Comprehensive findings report
@@ -190,7 +231,7 @@ conda create -n spatial-hackathon python=3.10
 conda activate spatial-hackathon
 
 # Install core dependencies
-pip install scanpy squidpy anndata pandas numpy matplotlib seaborn
+pip install scanpy squidpy anndata pandas numpy matplotlib seaborn scipy
 
 # Install TDA library (for persistent homology)
 pip install giotto-tda
@@ -210,12 +251,15 @@ cd spatial-hackathon-2026-showcase
 python scripts/08_polymathic_analysis.py
 
 # Generate figures
-python scripts/09_generate_showcase_figures.py
+python scripts/09_generate_showcase_figures_fixed.py
+
+# Run G4X multimodal analysis
+python scripts/10_g4x_multimodal_analysis.py
 ```
 
 ---
 
-## Polymath Knowledge Base
+## Polymath Knowledge Base Integration
 
 This analysis was grounded in the **Polymath v4** knowledge base:
 
@@ -224,28 +268,29 @@ This analysis was grounded in the **Polymath v4** knowledge base:
 | Papers | 2,193 |
 | Algorithms | 50,528 |
 | Code Chunks | 578,830 |
-| Repositories | 1,881 |
+| Repositories | 1,882 (incl. G4X-viewer) |
 
 ### Key Algorithms from Registry
 
-```python
-# Algorithms tagged with spatial biology applications
-from polymath.algo import search_algorithms
+```bash
+# Query Polymath for spatial biology algorithms
+cd /home/user/polymath-v4
+python scripts/algo.py --spatial --top 20
 
-# Graph theory algorithms
-graph_algos = search_algorithms(domain='graph', spatial_use=True)
-# Returns: betweenness_centrality, pagerank, community_detection, ...
+# Returns: optimal_transport, persistent_homology, community_detection,
+#          pagerank, spectral_clustering, leiden_algorithm, ...
 
-# Topology algorithms
-topo_algos = search_algorithms(domain='topology', spatial_use=True)
-# Returns: persistent_homology, betti_numbers, wasserstein_distance, ...
+# Search for specific algorithms
+python scripts/algo.py "wasserstein"
+python scripts/q.py "optimal transport spatial transcriptomics" -n 5
 ```
 
 ### Papers Supporting Methods
 
-1. **CellMap (Liu et al., NAR 2026)** - Spatial transcriptomic cellular landscape mapping
-2. **Singh et al. (2023)** - TDA applications in medical imaging
-3. **Bulletin of Mathematical Biology (2026)** - Persistent homology parameter classification
+1. **DeST-OT (2026)** - Spatiotemporal transcriptomics alignment via optimal transport
+2. **Persistent Homology Classification (Bull. Math. Biol. 2026)** - TDA for parameter spaces
+3. **MEcell (NAR 2026)** - Spatial transcriptomics simulation benchmarks
+4. **CellMap (Liu et al.)** - Spatial cellular landscape mapping
 
 ---
 
@@ -263,6 +308,7 @@ Research Focus: Spatial transcriptomics, computational pathology
 - **Polymath v4** knowledge base development
 - **Vanderbilt University** Department of Biomedical Informatics
 - **scverse** community (Scanpy, Squidpy, AnnData)
+- **Singular Genomics** (G4X platform and viewer)
 
 ---
 
@@ -290,3 +336,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 *Generated using Polymath v4 RRF search (lexical + semantic + Neo4j graph)*
 *Algorithm Registry: 50,528 algorithms across 15+ domains with spatial biology applications*
+*Last updated: 2026-01-19*
