@@ -384,6 +384,62 @@ YP04A was excluded due to insufficient cells for reliable statistical analysis:
 
 ---
 
+## Day 4: Deep-Dive Statistical Analysis (NEW - 2026-01-20)
+
+### Bootstrap Confidence Intervals & Leave-One-Out Sensitivity
+
+We performed comprehensive statistical robustness analysis on our key findings:
+
+| Metric | R Mean | NR Mean | Effect d | 95% CI | Welch p | LOO Stable? |
+|--------|--------|---------|----------|--------|---------|-------------|
+| **Spatial Entropy** | 3.66 | 3.51 | **2.00** | [0.93, 7.61] | 0.087† | Yes |
+| **Acinar Proportion** | 6.4% | 2.9% | **1.25** | [0.91, 4.30] | 0.135 | Yes |
+| Betweenness Centrality | 0.0091 | 0.0047 | 1.26 | [-0.50, 6.30] | 0.244 | No |
+| Betti-1 AUC | 660.8 | 628.7 | 0.15 | [-3.12, 17.08] | 0.873 | No |
+
+*† p < 0.1 (trending); LOO Stable = p-value range < 0.2 when leaving out individual samples*
+
+### Key Day 4 Findings
+
+1. **Spatial Entropy**: Most robust finding (d=2.0, LOO stable)
+   - Responders have higher cell type diversity
+   - Suggests more complex tumor microenvironment
+
+2. **Acinar Proportion**: Second strongest (d=1.25, LOO stable)
+   - Higher in responders (MWU p=0.057)
+   - May indicate less dedifferentiated tumors
+
+3. **Betweenness Centrality**: Large effect but unstable under LOO
+   - Single sample removal changes p from 0.02 to 0.60
+   - Requires validation in larger cohorts
+
+### New Day 4 Figures
+
+| Figure | Title | Description |
+|--------|-------|-------------|
+| **fig_deepdive_analysis** | Deep-Dive Statistics | Bootstrap CI & LOO for all 4 metrics |
+| **fig7_spatial_entropy** | Spatial Entropy | Cell type diversity analysis with dual stats |
+| **fig8_mi_biomarkers** | MI Biomarkers | Top 20 mutual information biomarkers |
+| **fig9_treatment_response** | DE Volcanos | Pre/post treatment DE with validation |
+
+### Figure: Deep-Dive Statistical Analysis
+*Bootstrap confidence intervals and leave-one-out sensitivity for all trending findings*
+![Deep-Dive Analysis](figures/fig_deepdive_analysis.png)
+
+### Figure: Spatial Entropy Analysis
+*Cell type diversity comparison with dual statistical testing*
+![Spatial Entropy](figures/fig7_spatial_entropy.png)
+
+### Figure: MI Biomarker Discovery
+*Mutual information-based biomarker identification*
+![MI Biomarkers](figures/fig8_mi_biomarkers.png)
+
+### Figure: Treatment Response DE Analysis
+*Differential expression volcanos with novel biomarker candidates*
+![Treatment Response](figures/fig9_treatment_response.png)
+
+---
+
 ## Repository Structure
 
 ```
