@@ -11,6 +11,10 @@ Author: Max Van Belkum
 Date: 2026-01-19
 """
 
+# Force non-interactive backend for headless environments (must be before pyplot import)
+import matplotlib
+matplotlib.use('Agg')
+
 import scanpy as sc
 import squidpy as sq
 import numpy as np
@@ -18,6 +22,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import seaborn as sns
+import traceback
 from pathlib import Path
 from typing import Dict, List, Optional
 import warnings
@@ -37,11 +42,15 @@ logger = logging.getLogger(__name__)
 try:
     from gtda.homology import VietorisRipsPersistence
     from gtda.diagrams import BettiCurve, PersistenceEntropy
-    from gtda.plotting import plot_diagram
+    # Note: gtda.plotting.plot_diagram creates Plotly figures, not Matplotlib!
+    # We use manual matplotlib plotting instead for PDF compatibility.
     HAS_TDA = True
 except ImportError:
     HAS_TDA = False
     logger.warning("giotto-tda not available")
+
+# Reproducibility: Fixed random seed for subsampling
+RNG = np.random.default_rng(42)
 
 # =============================================================================
 # Configuration
@@ -325,6 +334,42 @@ def fig4_spatial_hub_cells():
 # Figure 5: Persistent Homology (Topology)
 # =============================================================================
 
+def _plot_persistence_diagram_matplotlib(diagram: np.ndarray, ax: plt.Axes) -> None:
+    """
+    Plot a persistence diagram using Matplotlib (not Plotly).
+
+    giotto-tda's plot_diagram() returns a Plotly figure which is incompatible
+    with Matplotlib's ax parameter. This function provides Matplotlib-native plotting.
+
+    Args:
+        diagram: Array of shape (n_points, 3) with columns [birth, death, dimension]
+        ax: Matplotlib axes to plot on
+    """
+    # Separate by homology dimension (H0=connected components, H1=holes)
+    h0 = diagram[diagram[:, 2] == 0]
+    h1 = diagram[diagram[:, 2] == 1]
+
+    # Plot H0 (red) and H1 (blue)
+    if len(h0) > 0:
+        ax.scatter(h0[:, 0], h0[:, 1], c='#e74c3c', s=15, alpha=0.7, label='H0 (clusters)', zorder=3)
+    if len(h1) > 0:
+        ax.scatter(h1[:, 0], h1[:, 1], c='#3498db', s=15, alpha=0.7, label='H1 (holes)', zorder=3)
+
+    # Add diagonal line (birth = death)
+    all_vals = diagram[:, 0:2]
+    if len(all_vals) > 0:
+        min_val = max(0, all_vals.min() - 0.02)
+        max_val = all_vals.max() + 0.02
+        ax.plot([min_val, max_val], [min_val, max_val], 'k--', alpha=0.3, linewidth=1, zorder=1)
+        ax.set_xlim(min_val, max_val)
+        ax.set_ylim(min_val, max_val)
+
+    ax.set_xlabel('Birth', fontsize=8)
+    ax.set_ylabel('Death', fontsize=8)
+    ax.legend(loc='lower right', fontsize=6)
+    ax.set_aspect('equal', adjustable='box')
+
+
 def fig5_persistent_homology():
     """Compute and visualize persistent homology for tissue architecture."""
     if not HAS_TDA:
@@ -347,17 +392,18 @@ def fig5_persistent_homology():
             adata_path = ADATA_DIR / "annotated" / f"{sample}_annotated.h5ad"
         if not adata_path.exists():
             ax.text(0.5, 0.5, 'Not Found', ha='center', va='center')
+            ax.set_title(sample)
             continue
 
         adata = sc.read_h5ad(adata_path)
         coords = adata.obsm['spatial']
 
-        # Subsample for speed
+        # Subsample for speed (using fixed RNG for reproducibility)
         if len(coords) > 2000:
-            idx_sub = np.random.choice(len(coords), 2000, replace=False)
+            idx_sub = RNG.choice(len(coords), 2000, replace=False)
             coords = coords[idx_sub]
 
-        # Normalize
+        # Normalize coordinates to [0, 1]
         coords = (coords - coords.min(axis=0)) / (coords.max(axis=0) - coords.min(axis=0) + 1e-6)
 
         # Compute persistence
@@ -365,13 +411,18 @@ def fig5_persistent_homology():
             VR = VietorisRipsPersistence(metric='euclidean', homology_dimensions=[0, 1], n_jobs=-1)
             diagrams = VR.fit_transform([coords])
 
-            # Plot persistence diagram
-            plot_diagram(diagrams[0], ax=ax)
+            # Plot persistence diagram using our Matplotlib-native function
+            _plot_persistence_diagram_matplotlib(diagrams[0], ax)
+
             meta = PDAC_METADATA[sample]
             color = RESPONSE_COLORS[meta['response']]
             ax.set_title(f"{sample} ({meta['response']})", fontsize=10, fontweight='bold', color=color)
         except Exception as e:
-            ax.text(0.5, 0.5, f'Error: {str(e)[:30]}', ha='center', va='center')
+            # Log full traceback to console for debugging
+            logger.error(f"Error computing TDA for {sample}: {e}")
+            traceback.print_exc()
+            ax.text(0.5, 0.5, f'TDA Error\n{str(e)[:40]}', ha='center', va='center', fontsize=8)
+            ax.set_title(sample)
 
     # Hide unused subplot
     axes[1, 3].axis('off')
@@ -413,7 +464,7 @@ def fig6_betti_curves():
         coords = adata.obsm['spatial']
 
         if len(coords) > 2000:
-            idx_sub = np.random.choice(len(coords), 2000, replace=False)
+            idx_sub = RNG.choice(len(coords), 2000, replace=False)
             coords = coords[idx_sub]
 
         coords = (coords - coords.min(axis=0)) / (coords.max(axis=0) - coords.min(axis=0) + 1e-6)
@@ -428,7 +479,8 @@ def fig6_betti_curves():
             target = r_betti if meta['response'] == 'R' else nr_betti
             target['h0'].append(curves[0, :, 0])
             target['h1'].append(curves[0, :, 1])
-        except:
+        except Exception as e:
+            logger.warning(f"  Betti curve error for {sample}: {e}")
             continue
 
     # Plot H0 (connected components)

@@ -150,10 +150,12 @@ def compute_topology_features(adata, max_cells: int = 5000) -> Optional[Dict[str
     coords = adata.obsm['spatial']
 
     # Subsample if too large (TDA is O(n^3))
+    # Use fixed seed for reproducibility
     if len(coords) > max_cells:
-        idx = np.random.choice(len(coords), max_cells, replace=False)
+        rng = np.random.default_rng(42)
+        idx = rng.choice(len(coords), max_cells, replace=False)
         coords = coords[idx]
-        logger.info(f"  - Subsampled to {max_cells} cells")
+        logger.info(f"  - Subsampled to {max_cells} cells (seed=42)")
 
     # Normalize coordinates
     coords = (coords - coords.min(axis=0)) / (coords.max(axis=0) - coords.min(axis=0) + 1e-6)
@@ -193,6 +195,13 @@ def compute_mutual_information_genes(adata, target_col: str = 'cell_type', top_n
     applied to identify non-linearly associated genes.
 
     MI captures dependencies that correlation misses.
+
+    IMPORTANT DISTINCTION:
+    - MI vs cell_type: Identifies genes that discriminate cell types WITHIN a sample.
+      This is useful for validating cell type annotations and finding marker genes.
+    - For treatment response biomarkers (R vs NR): Use differential expression analysis
+      across samples (see 07_comparative.py), not per-sample MI, since each sample
+      has only one response label.
     """
     from sklearn.feature_selection import mutual_info_classif
 

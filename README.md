@@ -3,7 +3,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Scanpy](https://img.shields.io/badge/Scanpy-1.10+-green.svg)](https://scanpy.readthedocs.io/)
 [![Squidpy](https://img.shields.io/badge/Squidpy-1.4+-orange.svg)](https://squidpy.readthedocs.io/)
-[![Polymath](https://img.shields.io/badge/Polymath-v4-purple.svg)](https://github.com/yourusername/polymath-v4)
+[![Polymath](https://img.shields.io/badge/Polymath-v4-purple.svg)](https://github.com/vanbelkummax/polymath-v4)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **A polymathic approach to spatial transcriptomics analysis, applying cross-domain algorithms to identify treatment response biomarkers in pancreatic ductal adenocarcinoma (PDAC).**
@@ -203,7 +203,7 @@ pip install networkx
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/spatial-hackathon-2026-showcase.git
+git clone https://github.com/vanbelkummax/spatial-hackathon-2026-showcase.git
 cd spatial-hackathon-2026-showcase
 
 # Run polymathic analysis (requires processed data)
@@ -276,7 +276,7 @@ If you use this analysis or methodology, please cite:
   title = {Spatial Biology Hackathon 2026: PDAC Treatment Response Analysis},
   year = {2026},
   publisher = {GitHub},
-  url = {https://github.com/yourusername/spatial-hackathon-2026-showcase}
+  url = {https://github.com/vanbelkummax/spatial-hackathon-2026-showcase}
 }
 ```
 

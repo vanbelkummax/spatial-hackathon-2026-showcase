@@ -124,7 +124,9 @@ Changes in cell type proportions after treatment:
 
 Mutual information captures non-linear gene-phenotype relationships that correlation-based methods miss.
 
-### 4.1 Top MI Genes by Response
+**Important Note:** MI scores below are computed *within each sample* against cell type labels. This identifies genes that best discriminate cell types (useful for annotation validation and marker discovery). For treatment response biomarkers (R vs NR), see the Differential Expression section above, which compares genes *across* samples.
+
+### 4.1 Top Cell-Type Discriminative Genes by Response Group
 
 **Responders:**
 | Sample | Top MI Gene | MI Score | Biological Interpretation |

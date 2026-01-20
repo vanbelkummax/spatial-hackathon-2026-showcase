@@ -1,0 +1,28 @@
+# Spatial Biology Hackathon 2026 - Requirements
+# Install with: pip install -r requirements.txt
+
+# Core single-cell / spatial transcriptomics
+scanpy>=1.10.0
+squidpy>=1.4.0
+anndata>=0.10.0
+
+# Data manipulation
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Visualization
+matplotlib>=3.5.0
+seaborn>=0.12.0
+
+# Graph analysis (for centrality algorithms)
+networkx>=3.0
+
+# Machine learning (for mutual information)
+scikit-learn>=1.4.0
+
+# Topological Data Analysis (optional but recommended)
+giotto-tda>=0.6.0
+
+# Statistical analysis
+scipy>=1.10.0
+statsmodels>=0.14.0
