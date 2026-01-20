@@ -65,15 +65,15 @@ Rather than relying solely on standard spatial transcriptomics workflows, we lev
 - H1 (holes/voids): R samples show +25% higher AUC (p=0.057)
 - **Interpretation:** Responder tissues have more complex spatial architecture with more "holes" potentially facilitating drug penetration and immune cell access
 
-### 5. Cell Type Composition (Permutation-tested)
+### 5. Cell Type Composition (Mann-Whitney U)
 
 | Cell Type | R Mean% | NR Mean% | Effect | p-value |
 |-----------|---------|----------|--------|---------|
-| CAF_myCAF | 18.2% | 12.1% | +6.1% | 0.089 |
-| Macrophage | 8.4% | 5.2% | +3.2% | 0.142 |
-| T_cells | 4.1% | 2.3% | +1.8% | 0.201 |
+| CAF_myCAF | 18.2% | 12.1% | +6.1% | 0.114 |
+| Macrophage | 8.4% | 5.2% | +3.2% | 0.200 |
+| T_cells | 4.1% | 2.3% | +1.8% | 0.229 |
 
-*N=1000 permutations
+*Mann-Whitney U test (appropriate for n=4 R, n=3 NR)
 
 ---
 
@@ -144,7 +144,7 @@ Day 3: Polymathic Analysis (Cross-Domain)
 ![Sample Overview](figures/fig1_sample_overview.png)
 
 ### Figure 2: Cell Type Composition
-*Differential cell type enrichment with permutation tests (N=1000)*
+*Differential cell type enrichment with Mann-Whitney U test*
 ![Cell Type Composition](figures/fig2_cell_type_composition.png)
 
 ### Figure 3: Graph Centrality Analysis

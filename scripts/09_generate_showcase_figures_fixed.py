@@ -201,24 +201,12 @@ def fig1_sample_overview():
 # Figure 2: Cell Type Composition Comparison
 # =============================================================================
 
-def permutation_test(group1, group2, n_permutations=10000):
-    """Permutation test for difference in means between two groups."""
-    observed_diff = np.mean(group1) - np.mean(group2)
-    combined = np.concatenate([group1, group2])
-    n1 = len(group1)
-
-    count = 0
-    for _ in range(n_permutations):
-        np.random.shuffle(combined)
-        perm_diff = np.mean(combined[:n1]) - np.mean(combined[n1:])
-        if abs(perm_diff) >= abs(observed_diff):
-            count += 1
-
-    return count / n_permutations
-
-
 def fig2_cell_type_composition():
-    """Compare cell type composition between R and NR with permutation tests."""
+    """Compare cell type composition between R and NR with Mann-Whitney U tests.
+
+    Note: With only 4 R and 3 NR samples, Mann-Whitney U is more appropriate
+    than permutation tests (which require larger samples for reliable p-values).
+    """
     logger.info("Generating Figure 2: Cell Type Composition")
 
     compositions = []
@@ -264,7 +252,8 @@ def fig2_cell_type_composition():
     axes[0].legend(bbox_to_anchor=(1.02, 1), loc='upper left', fontsize=8)
     axes[0].set_xticklabels(['Non-Responder', 'Responder'], rotation=0)
 
-    # Panel 2: Differential with permutation test p-values
+    # Panel 2: Differential with Mann-Whitney U p-values
+    # Note: MWU is appropriate for small samples (n=4 R, n=3 NR)
     r_comp = pivot.loc['R'] if 'R' in pivot.index else pd.Series()
     nr_comp = pivot.loc['NR'] if 'NR' in pivot.index else pd.Series()
 
@@ -275,9 +264,10 @@ def fig2_cell_type_composition():
             r_vals = df[(df['response'] == 'R') & (df['cell_type'] == ct)]['fraction'].values
             nr_vals = df[(df['response'] == 'NR') & (df['cell_type'] == ct)]['fraction'].values
 
-            if len(r_vals) > 0 and len(nr_vals) > 0:
+            if len(r_vals) > 1 and len(nr_vals) > 1:
                 diff = np.mean(r_vals) - np.mean(nr_vals)
-                pval = permutation_test(r_vals, nr_vals, n_permutations=5000)
+                # Mann-Whitney U test (non-parametric, appropriate for small n)
+                _, pval = mannwhitneyu(r_vals, nr_vals, alternative='two-sided')
                 diff_results.append({'cell_type': ct, 'diff': diff, 'pval': pval})
 
         diff_df = pd.DataFrame(diff_results).sort_values('diff')
@@ -305,8 +295,8 @@ def fig2_cell_type_composition():
 
         axes[1].set_yticks(range(len(diff_df)))
         axes[1].set_yticklabels(diff_df['cell_type'])
-        axes[1].set_title('Differential Enrichment (R - NR)\n*** p<0.001, ** p<0.01, * p<0.05, † p<0.1',
-                         fontsize=12, fontweight='bold')
+        axes[1].set_title('Differential Enrichment (R - NR)\nMann-Whitney U: *** p<0.001, ** p<0.01, * p<0.05, † p<0.1',
+                         fontsize=11, fontweight='bold')
         axes[1].set_xlabel('Fraction Difference')
         axes[1].axvline(0, color='black', linestyle='--', linewidth=0.5)
 
