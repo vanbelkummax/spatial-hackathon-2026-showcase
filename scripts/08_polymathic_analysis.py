@@ -237,15 +237,13 @@ def compute_topology_features(adata, max_cells: int = 5000) -> Optional[Dict[str
 # Mutual Information Analysis (from Information Theory)
 # =============================================================================
 
-def compute_cross_sample_mi_response(all_adatas: Dict, metadata: Dict, top_n: int = 50) -> pd.DataFrame:
+def compute_cross_sample_mi_response_pseudobulk(all_adatas: Dict, metadata: Dict, top_n: int = 50) -> pd.DataFrame:
     """
-    Compute mutual information between genes and TREATMENT RESPONSE.
+    Compute MI at SAMPLE level (correct statistical unit) to avoid pseudoreplication.
 
-    This is the correct approach for finding treatment response biomarkers,
-    as it compares gene expression ACROSS samples (pooled) against R/NR labels.
-
-    IMPORTANT: The per-sample MI (vs cell_type) identifies cell-type marker genes.
-    This function (vs response) identifies actual treatment response biomarkers.
+    CRITICAL: The original cell-level approach treated 32K cells as independent,
+    but cells from the same sample share biological and technical variation.
+    This pseudobulk approach aggregates to sample means first, giving n=7 observations.
 
     Args:
         all_adatas: Dict of sample_name -> AnnData objects
@@ -253,12 +251,117 @@ def compute_cross_sample_mi_response(all_adatas: Dict, metadata: Dict, top_n: in
         top_n: Number of top genes to return
 
     Returns:
-        DataFrame with genes sorted by MI against response
+        DataFrame with genes sorted by MI against response, with Welch's t-test validation
     """
+    from sklearn.feature_selection import mutual_info_classif
+    from scipy.stats import ttest_ind
+    import anndata as ad
+
+    logger.info("Computing cross-sample MI using PSEUDOBULK aggregation (correct statistical unit)...")
+
+    # Step 1: Find common genes across all samples
+    common_genes = None
+    for sample, adata in all_adatas.items():
+        if sample not in metadata:
+            continue
+        if common_genes is None:
+            common_genes = set(adata.var_names)
+        else:
+            common_genes = common_genes.intersection(set(adata.var_names))
+
+    if not common_genes:
+        logger.warning("  - No common genes found")
+        return pd.DataFrame()
+
+    gene_names = sorted(list(common_genes))
+    logger.info(f"  - Found {len(gene_names)} common genes across samples")
+
+    # Step 2: Aggregate expression by sample (pseudobulk = mean expression per gene)
+    sample_expr = {}
+    sample_labels = {}
+
+    for sample, adata in all_adatas.items():
+        if sample not in metadata:
+            continue
+        # Subset to common genes and compute mean expression per gene
+        adata_subset = adata[:, gene_names]
+        X = adata_subset.X.toarray() if hasattr(adata_subset.X, 'toarray') else adata_subset.X
+        sample_expr[sample] = X.mean(axis=0)  # Mean across all cells in sample
+        sample_labels[sample] = 1 if metadata[sample]['response'] == 'R' else 0
+
+    # Step 3: Build sample-level matrices (n=7 samples x n_genes)
+    samples = sorted(sample_expr.keys())
+    X = np.array([sample_expr[s] for s in samples])  # (7, n_genes)
+    y = np.array([sample_labels[s] for s in samples])  # (7,)
+
+    logger.info(f"  - Pseudobulk matrix: {X.shape[0]} samples x {X.shape[1]} genes")
+    logger.info(f"  - Response labels: {sum(y)} R, {len(y) - sum(y)} NR")
+
+    # Step 4: Limit genes for MI computation (top variable genes)
+    n_genes_limit = min(5000, X.shape[1])
+    if X.shape[1] > n_genes_limit:
+        gene_var = np.var(X, axis=0)
+        top_var_idx = np.argsort(gene_var)[-n_genes_limit:]
+        X = X[:, top_var_idx]
+        gene_names = [gene_names[i] for i in top_var_idx]
+        logger.info(f"  - Using top {n_genes_limit} variable genes")
+
+    # Step 5: Compute MI (now on 7 INDEPENDENT samples)
+    # Use n_neighbors=2 since we have very few samples
+    logger.info(f"  - Computing MI for {len(gene_names)} genes vs response (sample-level)...")
+    mi_scores = mutual_info_classif(X, y, random_state=42, n_neighbors=2)
+
+    # Step 6: Create results dataframe with validation via Welch's t-test
+    results = pd.DataFrame({
+        'gene': gene_names,
+        'mi_vs_response': mi_scores
+    }).sort_values('mi_vs_response', ascending=False)
+
+    # Step 7: Add Welch's t-test p-values for top candidates (statistical validation)
+    logger.info("  - Validating top candidates with Welch's t-test...")
+    welch_pvals = []
+    r_means = []
+    nr_means = []
+
+    for gene in results['gene']:
+        gene_idx = gene_names.index(gene)
+        r_vals = [sample_expr[s][gene_idx] for s in samples if sample_labels[s] == 1]
+        nr_vals = [sample_expr[s][gene_idx] for s in samples if sample_labels[s] == 0]
+
+        if len(r_vals) >= 2 and len(nr_vals) >= 2:
+            _, welch_p = ttest_ind(r_vals, nr_vals, equal_var=False)
+            welch_pvals.append(welch_p)
+            r_means.append(np.mean(r_vals))
+            nr_means.append(np.mean(nr_vals))
+        else:
+            welch_pvals.append(np.nan)
+            r_means.append(np.nan)
+            nr_means.append(np.nan)
+
+    results['welch_p'] = welch_pvals
+    results['r_mean'] = r_means
+    results['nr_mean'] = nr_means
+    results['fold_change'] = results['r_mean'] / (results['nr_mean'] + 1e-10)
+
+    logger.info(f"  - Top 5 by MI (with Welch validation):")
+    for _, row in results.head(5).iterrows():
+        logger.info(f"    {row['gene']:15s} MI={row['mi_vs_response']:.4f}, Welch p={row['welch_p']:.4f}")
+
+    return results.head(top_n)
+
+
+def compute_cross_sample_mi_response(all_adatas: Dict, metadata: Dict, top_n: int = 50) -> pd.DataFrame:
+    """
+    DEPRECATED: Use compute_cross_sample_mi_response_pseudobulk instead.
+
+    This cell-level approach has pseudoreplication issues (treating 32K cells as independent).
+    Kept for reference/comparison only.
+    """
+    logger.warning("DEPRECATED: Using cell-level MI (pseudoreplication issue). Use pseudobulk version.")
     from sklearn.feature_selection import mutual_info_classif
     import anndata as ad
 
-    logger.info("Computing cross-sample MI against TREATMENT RESPONSE...")
+    logger.info("Computing cross-sample MI against TREATMENT RESPONSE (DEPRECATED cell-level)...")
 
     # Merge all samples with response labels
     adatas_list = []
@@ -429,19 +532,20 @@ def main():
             logger.error(f"Error analyzing {sample_name}: {e}")
             continue
 
-    # NEW: Compute cross-sample MI against treatment response
+    # Compute cross-sample MI against treatment response using PSEUDOBULK (correct statistical unit)
     if len(all_adatas) >= 2:
         logger.info("\n" + "="*60)
-        logger.info("CROSS-SAMPLE MI: Treatment Response Biomarkers")
+        logger.info("CROSS-SAMPLE MI: Treatment Response Biomarkers (Pseudobulk)")
         logger.info("="*60)
-        mi_response_df = compute_cross_sample_mi_response(all_adatas, PDAC_METADATA, top_n=50)
+        mi_response_df = compute_cross_sample_mi_response_pseudobulk(all_adatas, PDAC_METADATA, top_n=50)
         if len(mi_response_df) > 0:
             mi_response_path = TABLE_DIR / "mi_vs_response_biomarkers.csv"
             mi_response_df.to_csv(mi_response_path, index=False)
-            logger.info(f"Saved MI vs Response to {mi_response_path}")
-            logger.info(f"Top 10 Treatment Response Biomarkers (by MI):")
-            for i, row in mi_response_df.head(10).iterrows():
-                logger.info(f"  {row['gene']:15s} MI={row['mi_vs_response']:.4f}")
+            logger.info(f"Saved MI vs Response (Pseudobulk) to {mi_response_path}")
+            logger.info(f"Top 10 Treatment Response Biomarkers (by MI, with Welch validation):")
+            for _, row in mi_response_df.head(10).iterrows():
+                welch_str = f", Welch p={row['welch_p']:.4f}" if 'welch_p' in row else ""
+                logger.info(f"  {row['gene']:15s} MI={row['mi_vs_response']:.4f}{welch_str}")
 
     # Combine results
     if all_results:

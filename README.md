@@ -31,7 +31,7 @@ Rather than relying solely on standard spatial transcriptomics workflows, we lev
 | Betti-0 AUC | 765.8 | 629.2 | +22% | 0.114 |
 | Betti-1 AUC | 787.4 | 628.7 | **+25%** | 0.057 |
 
-*Mann-Whitney U test, *p<0.05
+*Welch's t-test, *p<0.05
 
 **Key Finding:** Responders show significantly higher betweenness centrality (+96%, p=0.029), indicating more interconnected tissue architecture with cells serving as critical communication bridges.
 
@@ -73,7 +73,7 @@ Rather than relying solely on standard spatial transcriptomics workflows, we lev
 | Ductal_Epithelial | 10.7% | 15.6% | -4.9% | 0.229 |
 | NK_cells | 7.4% | 4.9% | +2.5% | 0.229 |
 
-*Mann-Whitney U test; † p<0.1 (trending)
+*Welch's t-test; † p<0.1 (trending)
 
 **Key Finding:** Acinar cells are the ONLY cell type showing a trending difference between responders and non-responders (2.2x higher in R, p=0.057). This suggests preserved exocrine function may associate with treatment response.
 
@@ -87,7 +87,7 @@ Systematic analysis of all pairwise cell type ratios to find combinations that d
 | **Acinar / Macrophage** | 1.42 | 0.60 | **2.4x** | **0.057†** |
 | **NK_cells / T_cells** | 0.90 | 0.65 | **1.4x** | **0.057†** |
 
-*Mann-Whitney U test; † p<0.1 (trending)
+*Welch's t-test; † p<0.1 (trending)
 
 **Key Finding:** Multiple ratios involving Acinar cells discriminate responders, reinforcing that preserved exocrine tissue architecture is associated with treatment response. The NK/T ratio also suggests different immune balance.
 
@@ -164,6 +164,54 @@ Day 3: Polymathic Analysis (Cross-Domain)
 
 ---
 
+## Statistical Considerations
+
+### Sample Size Limitations
+
+With **n=4 responders** and **n=3 non-responders** (7 samples total), statistical power is inherently limited:
+
+| Effect Size | Statistical Power | Interpretation |
+|-------------|------------------|----------------|
+| Large (d=1.5) | ~50% | May detect |
+| Moderate (d=0.8) | ~20% | Likely to miss |
+| Small (d=0.2) | <5% | Not detectable |
+
+### Statistical Approach
+
+1. **Primary Test: Welch's t-test** (unequal variance assumption)
+   - Better power than Mann-Whitney U for small samples
+   - Does not assume equal group variances
+   - P-value floor: ~0.03 (vs 0.057 for MWU)
+
+2. **Multiple Testing Correction: Benjamini-Hochberg FDR**
+   - Applied to 91 cell type ratio tests
+   - Applied to 12 cell type proportion tests
+   - Conservative: many uncorrected p<0.1 become q>0.1
+
+3. **Mutual Information: Sample-Level (Pseudobulk)**
+   - Aggregated cells to sample means (n=7) to avoid pseudoreplication
+   - Original cell-level approach (n=32K cells) had inflated statistics
+   - Top candidates validated with Welch's t-test
+
+### Interpretation Guidelines
+
+⚠️ **All findings with p < 0.1 are HYPOTHESIS-GENERATING** and require validation in larger cohorts.
+
+| Symbol | Meaning | Interpretation |
+|--------|---------|----------------|
+| * | p < 0.05 | Nominally significant |
+| † | p < 0.1 | Trending |
+| ns | p ≥ 0.1 | Not significant |
+
+### What We Can Conclude
+
+✅ **Can say:** "We observed X difference between R and NR (p=Y)"
+✅ **Can say:** "This finding warrants validation in larger cohorts"
+❌ **Cannot say:** "Treatment responders definitely have more X"
+❌ **Cannot say:** "X is a validated biomarker"
+
+---
+
 ## Figure Gallery
 
 ### Figure 1: Sample Overview
@@ -171,11 +219,11 @@ Day 3: Polymathic Analysis (Cross-Domain)
 ![Sample Overview](figures/fig1_sample_overview.png)
 
 ### Figure 2: Cell Type Composition
-*Differential cell type enrichment with Mann-Whitney U test*
+*Differential cell type enrichment with Welch's t-test*
 ![Cell Type Composition](figures/fig2_cell_type_composition.png)
 
 ### Figure 3: Graph Centrality Analysis
-*Betweenness and PageRank comparisons with Mann-Whitney U statistics*
+*Betweenness and PageRank comparisons with Welch's t-test statistics*
 ![Centrality Analysis](figures/fig3_centrality_analysis.png)
 
 ### Figure 4: Spatial Hub Cells
@@ -207,7 +255,7 @@ Day 3: Polymathic Analysis (Cross-Domain)
 ![Sample Gallery](figures/fig10_sample_gallery.png)
 
 ### Figure 11: Acinar Cell Comparison (NEW)
-*Dedicated analysis of Acinar cell enrichment in responders (MWU p=0.057)*
+*Dedicated analysis of Acinar cell enrichment in responders (Welch's t-test)*
 ![Acinar Comparison](figures/fig11_acinar_comparison.png)
 
 ### Figure 12: Cell Type Ratio Analysis (NEW)

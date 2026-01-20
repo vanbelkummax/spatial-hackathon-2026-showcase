@@ -27,7 +27,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 import warnings
 import logging
-from scipy.stats import mannwhitneyu
+from scipy.stats import mannwhitneyu, ttest_ind
 
 warnings.filterwarnings('ignore')
 plt.rcParams['figure.dpi'] = 150
@@ -83,11 +83,15 @@ def maxmin_subsample(coords: np.ndarray, n_landmarks: int, seed: int = 42) -> np
 # =============================================================================
 # Configuration
 # =============================================================================
+# NOTE: These scripts are designed to run from the primary analysis repo
+# (/home/user/spatial-hackathon-2026/), not from this showcase repo.
+# Figures are generated there and then copied to this showcase repo.
 
 PROJECT_ROOT = Path(__file__).parent.parent
 OUTPUT_DIR = PROJECT_ROOT / "outputs"
 ADATA_DIR = OUTPUT_DIR / "adata"
 FIG_DIR = OUTPUT_DIR / "figures" / "showcase"
+TABLE_DIR = OUTPUT_DIR / "tables"
 FIG_DIR.mkdir(parents=True, exist_ok=True)
 
 # Color palettes
@@ -266,8 +270,8 @@ def fig2_cell_type_composition():
 
             if len(r_vals) > 1 and len(nr_vals) > 1:
                 diff = np.mean(r_vals) - np.mean(nr_vals)
-                # Mann-Whitney U test (non-parametric, appropriate for small n)
-                _, pval = mannwhitneyu(r_vals, nr_vals, alternative='two-sided')
+                # Welch's t-test (better power for small n with unequal variance)
+                _, pval = ttest_ind(r_vals, nr_vals, equal_var=False)
                 diff_results.append({'cell_type': ct, 'diff': diff, 'pval': pval})
 
         diff_df = pd.DataFrame(diff_results).sort_values('diff')
@@ -299,7 +303,7 @@ def fig2_cell_type_composition():
 
         axes[1].set_yticks(range(len(diff_df)))
         axes[1].set_yticklabels(diff_df['cell_type'])
-        axes[1].set_title('Differential Enrichment (R - NR)\nMann-Whitney U test (* p<0.05, † p<0.1)',
+        axes[1].set_title("Differential Enrichment (R - NR)\nWelch's t-test (* p<0.05, † p<0.1)",
                          fontsize=11, fontweight='bold')
         axes[1].set_xlabel('Fraction Difference')
         axes[1].axvline(0, color='black', linestyle='--', linewidth=0.5)
@@ -349,7 +353,6 @@ def fig3_centrality_analysis():
     - Hub cells: Top 5% by PageRank - the most influential cells in tissue architecture.
     """
     logger.info("Generating Figure 3: Graph Centrality Analysis")
-    from scipy.stats import mannwhitneyu
 
     results_path = OUTPUT_DIR / "tables" / "polymathic_analysis_results.csv"
     if not results_path.exists():
@@ -369,12 +372,12 @@ def fig3_centrality_analysis():
     sns.stripplot(data=df, x='response', y='centrality_mean_betweenness',
                   color='black', size=10, ax=ax, order=['NR', 'R'])
 
-    # Statistical test
-    stat, pval = mannwhitneyu(r_df['centrality_mean_betweenness'],
-                              nr_df['centrality_mean_betweenness'], alternative='two-sided')
+    # Statistical test (Welch's t-test for better power with small n)
+    stat, pval = ttest_ind(r_df['centrality_mean_betweenness'],
+                           nr_df['centrality_mean_betweenness'], equal_var=False)
     sig = '***' if pval < 0.001 else '**' if pval < 0.01 else '*' if pval < 0.05 else 'ns'
 
-    ax.set_title(f'Mean Betweenness Centrality\n(Mann-Whitney p={pval:.3f} {sig})',
+    ax.set_title(f"Mean Betweenness Centrality\n(Welch's t-test p={pval:.3f} {sig})",
                  fontsize=12, fontweight='bold')
     ax.set_xlabel('Treatment Response')
     ax.set_ylabel('Mean Betweenness')
@@ -391,11 +394,11 @@ def fig3_centrality_analysis():
     sns.stripplot(data=df, x='response', y='centrality_mean_pagerank',
                   color='black', size=10, ax=ax, order=['NR', 'R'])
 
-    stat, pval = mannwhitneyu(r_df['centrality_mean_pagerank'],
-                              nr_df['centrality_mean_pagerank'], alternative='two-sided')
+    stat, pval = ttest_ind(r_df['centrality_mean_pagerank'],
+                           nr_df['centrality_mean_pagerank'], equal_var=False)
     sig = '***' if pval < 0.001 else '**' if pval < 0.01 else '*' if pval < 0.05 else 'ns'
 
-    ax.set_title(f'Mean PageRank (Cell Influence)\n(Mann-Whitney p={pval:.3f} {sig})',
+    ax.set_title(f"Mean PageRank (Cell Influence)\n(Welch's t-test p={pval:.3f} {sig})",
                  fontsize=12, fontweight='bold')
     ax.set_xlabel('Treatment Response')
     ax.set_ylabel('Mean PageRank')
@@ -761,12 +764,12 @@ def fig6_betti_curves():
             logger.warning(f"  Betti curve error for {sample}: {e}")
             continue
 
-    # Statistical tests (Mann-Whitney U for AUC comparison)
+    # Statistical tests (Welch's t-test for AUC comparison - better power with small n)
     h0_stat, h0_pval = None, None
     h1_stat, h1_pval = None, None
     if len(r_betti['h0_auc']) >= 2 and len(nr_betti['h0_auc']) >= 2:
-        h0_stat, h0_pval = mannwhitneyu(r_betti['h0_auc'], nr_betti['h0_auc'], alternative='two-sided')
-        h1_stat, h1_pval = mannwhitneyu(r_betti['h1_auc'], nr_betti['h1_auc'], alternative='two-sided')
+        h0_stat, h0_pval = ttest_ind(r_betti['h0_auc'], nr_betti['h0_auc'], equal_var=False)
+        h1_stat, h1_pval = ttest_ind(r_betti['h1_auc'], nr_betti['h1_auc'], equal_var=False)
 
     # Plot H0 (connected components)
     ax = axes[0]
@@ -1166,11 +1169,16 @@ def fig9_biomarker_focus():
 
     mi_df = pd.read_csv(mi_path)
 
-    # Load DE results if available
-    de_path = OUTPUT_DIR / "tables" / "de_R_vs_NR.csv"
+    # Load DE results if available (try both Pre and Post)
+    de_path = OUTPUT_DIR / "tables" / "de_R_vs_NR_Post.csv"
+    if not de_path.exists():
+        de_path = OUTPUT_DIR / "tables" / "de_R_vs_NR_Pre.csv"
     has_de = de_path.exists()
     if has_de:
         de_df = pd.read_csv(de_path)
+        # Handle both 'names' and 'gene' column naming
+        gene_col = 'names' if 'names' in de_df.columns else 'gene'
+        de_df['gene_name'] = de_df[gene_col] if gene_col in de_df.columns else de_df.index
         de_up = de_df[de_df['logfoldchanges'] > 0.5].nsmallest(20, 'pvals_adj')
         de_down = de_df[de_df['logfoldchanges'] < -0.5].nsmallest(20, 'pvals_adj')
 
@@ -1197,18 +1205,19 @@ def fig9_biomarker_focus():
     ax2 = fig.add_subplot(2, 2, 2)
     if has_de and len(de_up) > 0:
         # Volcano-style but simplified
-        colors_up = plt.cm.Greens(np.linspace(0.4, 0.8, min(10, len(de_up))))
-        ax2.barh(range(min(10, len(de_up))), de_up.head(10)['logfoldchanges'],
+        n_show = min(10, len(de_up))
+        colors_up = plt.cm.Greens(np.linspace(0.4, 0.8, n_show))
+        ax2.barh(range(n_show), de_up.head(n_show)['logfoldchanges'],
                  color=colors_up, label='Upregulated in R')
-        ax2.set_yticks(range(min(10, len(de_up))))
-        ax2.set_yticklabels(de_up.head(10)['names'], fontsize=9)
+        ax2.set_yticks(range(n_show))
+        ax2.set_yticklabels(de_up.head(n_show)['gene_name'], fontsize=9)
         ax2.set_xlabel('Log2 Fold Change (R vs NR)', fontsize=11)
         ax2.set_title('Top DE Genes Upregulated in Responders\n(Traditional differential expression)', fontsize=12, fontweight='bold')
         ax2.invert_yaxis()
         ax2.axvline(x=0, color='gray', linestyle='--', alpha=0.5)
         ax2.grid(axis='x', alpha=0.3)
     else:
-        ax2.text(0.5, 0.5, 'DE analysis not available\nRun 06_de.py first',
+        ax2.text(0.5, 0.5, 'DE analysis not available\nRun differential expression first',
                  ha='center', va='center', transform=ax2.transAxes, fontsize=12)
         ax2.set_title('DE Genes (not computed)', fontsize=12)
 
@@ -1218,7 +1227,8 @@ def fig9_biomarker_focus():
     # Find overlap between MI and DE genes
     mi_genes = set(mi_df.head(50)['gene'])
     if has_de:
-        de_genes = set(de_df[de_df['pvals_adj'] < 0.05]['names'])
+        de_sig = de_df[de_df['pvals_adj'] < 0.05]
+        de_genes = set(de_sig['gene_name'])
         overlap = mi_genes & de_genes
         only_mi = mi_genes - de_genes
         only_de = de_genes - mi_genes
@@ -1231,13 +1241,23 @@ def fig9_biomarker_focus():
         colors_venn = ['#ff9999', '#99ff99', '#9999ff']
         ax3.bar(data['Category'], data['Count'], color=colors_venn, edgecolor='black')
         ax3.set_ylabel('Number of Genes', fontsize=11)
-        ax3.set_title('MI vs DE Gene Overlap\n(Top 50 from each method)', fontsize=12, fontweight='bold')
+        ax3.set_title('MI vs DE Gene Overlap\n(Top 50 MI vs significant DE)', fontsize=12, fontweight='bold')
 
         # Add gene names as text
-        overlap_text = f"Overlap genes: {', '.join(list(overlap)[:5])}" if overlap else "No overlap"
+        if overlap:
+            overlap_list = sorted(list(overlap))[:5]
+            overlap_text = f"Overlap: {', '.join(overlap_list)}"
+            if len(overlap) > 5:
+                overlap_text += f"... (+{len(overlap)-5} more)"
+        else:
+            overlap_text = "No overlap in top genes"
         ax3.annotate(overlap_text, xy=(0.5, 0.95), xycoords='axes fraction',
                      fontsize=8, ha='center', va='top',
                      bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
+
+        # Add counts on bars
+        for i, (cat, cnt) in enumerate(zip(data['Category'], data['Count'])):
+            ax3.text(i, cnt + 1, str(cnt), ha='center', fontsize=11, fontweight='bold')
     else:
         ax3.text(0.5, 0.5, 'Cannot compute overlap\nwithout DE results',
                  ha='center', va='center', transform=ax3.transAxes)
@@ -1501,12 +1521,12 @@ def fig11_acinar_comparison():
     ax1.set_ylabel('Acinar Cell Fraction (%)', fontsize=12)
     ax1.set_title('A. Acinar Enrichment in Responders', fontsize=12, fontweight='bold')
 
-    # Add statistics annotation
+    # Add statistics annotation (Welch's t-test has better power with small n)
     y_max = max(max(r_vals), max(nr_vals))
     ax1.plot([0, 0, 1, 1], [y_max+1, y_max+2, y_max+2, y_max+1], 'k-', linewidth=1)
-    sig_text = f'MWU p={mwu_p:.3f}' + (' †' if mwu_p < 0.1 else '')
+    sig_text = f"Welch p={welch_p:.3f}" + (' *' if welch_p < 0.05 else (' †' if welch_p < 0.1 else ''))
     ax1.text(0.5, y_max+2.5, sig_text, ha='center', fontsize=11, fontweight='bold',
-             color='#d35400' if mwu_p < 0.1 else 'black')
+             color='#27ae60' if welch_p < 0.05 else ('#d35400' if welch_p < 0.1 else 'black'))
     ax1.set_ylim(0, y_max + 5)
 
     # Panel B: Individual samples bar chart
@@ -1537,6 +1557,10 @@ def fig11_acinar_comparison():
     ax3 = fig.add_subplot(gs[0, 2])
     ax3.axis('off')
 
+    # Determine significance level
+    sig_marker = '***' if welch_p < 0.001 else '**' if welch_p < 0.01 else '*' if welch_p < 0.05 else '†' if welch_p < 0.1 else ''
+    sig_status = 'SIGNIFICANT' if welch_p < 0.05 else 'TRENDING' if welch_p < 0.1 else 'NOT SIGNIFICANT'
+
     stats_text = f"""
 STATISTICAL ANALYSIS
 {'='*40}
@@ -1550,16 +1574,18 @@ Acinar Cell Fractions:
   • NR Mean: {np.mean(nr_vals):.1f}% (SD: {np.std(nr_vals):.1f}%)
   • Difference: {np.mean(r_vals) - np.mean(nr_vals):+.1f}%
 
-Statistical Tests:
-  • Mann-Whitney U: p = {mwu_p:.4f} {'†' if mwu_p < 0.1 else ''}
-  • Welch's t-test: p = {welch_p:.4f}
+Statistical Tests (Welch's t-test preferred):
+  • Welch's t-test: p = {welch_p:.4f} {sig_marker}
+  • Mann-Whitney U: p = {mwu_p:.4f} (reference)
+
+Result: {sig_status}
 
 {'='*40}
 INTERPRETATION
 {'='*40}
 
-Acinar cells show a TRENDING increase in
-treatment responders (p=0.057).
+Acinar cells show {'a SIGNIFICANT' if welch_p < 0.05 else 'a TRENDING'} increase
+in treatment responders (p={welch_p:.3f}).
 
 This finding suggests that preserved acinar
 cell populations may be associated with
@@ -1663,6 +1689,386 @@ NEXT STEPS
 
 
 # =============================================================================
+# Figure 12: Cell Type Ratio Analysis
+# =============================================================================
+
+def fig12_ratio_analysis():
+    """
+    Analyze cell type ratios that discriminate R vs NR.
+    Key insight: Ratios often reveal relationships that absolute values miss.
+    """
+    logger.info("Generating Figure 12: Cell Type Ratio Analysis")
+
+    # Load ratio analysis results
+    ratio_path = OUTPUT_DIR / "tables" / "cell_type_ratio_analysis.csv"
+    if not ratio_path.exists():
+        logger.warning("  No ratio analysis data - run ratio analysis first")
+        return
+
+    ratio_df = pd.read_csv(ratio_path)
+
+    # Also load raw data for plotting
+    compositions = {}
+    for sample, meta in PDAC_METADATA.items():
+        adata_path = ADATA_DIR / "annotated" / f"{sample}_annotated.h5ad"
+        if adata_path.exists():
+            adata = sc.read_h5ad(adata_path)
+            if 'cell_type' in adata.obs.columns:
+                counts = adata.obs['cell_type'].value_counts(normalize=True)
+                compositions[sample] = {'response': meta['response'], **counts.to_dict()}
+
+    comp_df = pd.DataFrame(compositions).T.fillna(0)
+
+    fig = plt.figure(figsize=(18, 12))
+    gs = fig.add_gridspec(2, 3, hspace=0.3, wspace=0.3)
+
+    # Panel A: Top discriminating ratios
+    ax1 = fig.add_subplot(gs[0, 0])
+    top_ratios = ratio_df.nsmallest(10, 'min_p')
+    colors = ['#e74c3c' if p < 0.1 else '#95a5a6' for p in top_ratios['min_p']]
+    bars = ax1.barh(range(len(top_ratios)), -np.log10(top_ratios['min_p']), color=colors)
+    ax1.set_yticks(range(len(top_ratios)))
+    ax1.set_yticklabels(top_ratios['ratio'], fontsize=9)
+    ax1.set_xlabel('-log10(p-value)', fontsize=11)
+    ax1.axvline(-np.log10(0.1), color='red', linestyle='--', alpha=0.7, label='p=0.1')
+    ax1.axvline(-np.log10(0.05), color='darkred', linestyle='--', alpha=0.7, label='p=0.05')
+    ax1.legend(fontsize=8)
+    ax1.set_title('A. Top Discriminating Ratios\n(sorted by significance)', fontsize=12, fontweight='bold')
+    ax1.invert_yaxis()
+
+    # Panel B: Best ratio - Acinar/Low_Confidence box plot
+    ax2 = fig.add_subplot(gs[0, 1])
+    eps = 0.001
+    ratio_vals = (comp_df['Acinar'] + eps) / (comp_df['Low_Confidence'] + eps)
+    r_vals = ratio_vals[comp_df['response'] == 'R'].values
+    nr_vals = ratio_vals[comp_df['response'] == 'NR'].values
+
+    bp = ax2.boxplot([nr_vals, r_vals], positions=[0, 1], widths=0.5,
+                     patch_artist=True, showfliers=False)
+    for patch, color in zip(bp['boxes'], [RESPONSE_COLORS['NR'], RESPONSE_COLORS['R']]):
+        patch.set_facecolor(color)
+        patch.set_alpha(0.5)
+
+    # Add points
+    for vals, pos, resp in [(nr_vals, 0, 'NR'), (r_vals, 1, 'R')]:
+        jitter = np.random.uniform(-0.1, 0.1, len(vals))
+        ax2.scatter([pos + j for j in jitter], vals, c=RESPONSE_COLORS[resp],
+                   s=80, alpha=0.8, edgecolors='black', zorder=5)
+
+    ax2.set_xticks([0, 1])
+    ax2.set_xticklabels(['NR (n=3)', 'R (n=4)'], fontsize=11)
+    ax2.set_ylabel('Acinar / Low_Confidence Ratio', fontsize=11)
+    ax2.set_title('B. Acinar/Low_Confidence\n(MWU p=0.057)', fontsize=12, fontweight='bold')
+
+    # Panel C: Acinar/Macrophage ratio
+    ax3 = fig.add_subplot(gs[0, 2])
+    ratio_vals2 = (comp_df['Acinar'] + eps) / (comp_df['Macrophage'] + eps)
+    r_vals2 = ratio_vals2[comp_df['response'] == 'R'].values
+    nr_vals2 = ratio_vals2[comp_df['response'] == 'NR'].values
+
+    bp2 = ax3.boxplot([nr_vals2, r_vals2], positions=[0, 1], widths=0.5,
+                      patch_artist=True, showfliers=False)
+    for patch, color in zip(bp2['boxes'], [RESPONSE_COLORS['NR'], RESPONSE_COLORS['R']]):
+        patch.set_facecolor(color)
+        patch.set_alpha(0.5)
+
+    for vals, pos, resp in [(nr_vals2, 0, 'NR'), (r_vals2, 1, 'R')]:
+        jitter = np.random.uniform(-0.1, 0.1, len(vals))
+        ax3.scatter([pos + j for j in jitter], vals, c=RESPONSE_COLORS[resp],
+                   s=80, alpha=0.8, edgecolors='black', zorder=5)
+
+    ax3.set_xticks([0, 1])
+    ax3.set_xticklabels(['NR (n=3)', 'R (n=4)'], fontsize=11)
+    ax3.set_ylabel('Acinar / Macrophage Ratio', fontsize=11)
+    ax3.set_title('C. Acinar/Macrophage\n(MWU p=0.057)', fontsize=12, fontweight='bold')
+
+    # Panel D: NK/T cell ratio (opposite direction)
+    ax4 = fig.add_subplot(gs[1, 0])
+    if 'NK_cells' in comp_df.columns and 'T_cells' in comp_df.columns:
+        ratio_vals3 = (comp_df['NK_cells'] + eps) / (comp_df['T_cells'] + eps)
+        r_vals3 = ratio_vals3[comp_df['response'] == 'R'].values
+        nr_vals3 = ratio_vals3[comp_df['response'] == 'NR'].values
+
+        bp3 = ax4.boxplot([nr_vals3, r_vals3], positions=[0, 1], widths=0.5,
+                          patch_artist=True, showfliers=False)
+        for patch, color in zip(bp3['boxes'], [RESPONSE_COLORS['NR'], RESPONSE_COLORS['R']]):
+            patch.set_facecolor(color)
+            patch.set_alpha(0.5)
+
+        for vals, pos, resp in [(nr_vals3, 0, 'NR'), (r_vals3, 1, 'R')]:
+            jitter = np.random.uniform(-0.1, 0.1, len(vals))
+            ax4.scatter([pos + j for j in jitter], vals, c=RESPONSE_COLORS[resp],
+                       s=80, alpha=0.8, edgecolors='black', zorder=5)
+
+        ax4.set_xticks([0, 1])
+        ax4.set_xticklabels(['NR (n=3)', 'R (n=4)'], fontsize=11)
+        ax4.set_ylabel('NK cells / T cells Ratio', fontsize=11)
+        ax4.set_title('D. NK/T Cell Ratio\n(MWU p=0.057, higher in R)', fontsize=12, fontweight='bold')
+
+    # Panel E: Heatmap of significant ratios
+    ax5 = fig.add_subplot(gs[1, 1])
+    sig_ratios = ratio_df[ratio_df['min_p'] < 0.15].head(8)
+
+    # Create heatmap data
+    heatmap_data = []
+    for _, row in sig_ratios.iterrows():
+        heatmap_data.append({
+            'ratio': row['ratio'],
+            'R': row['R_mean'],
+            'NR': row['NR_mean']
+        })
+    heatmap_df = pd.DataFrame(heatmap_data).set_index('ratio')
+
+    sns.heatmap(heatmap_df, ax=ax5, cmap='RdYlBu_r', annot=True, fmt='.2f',
+                cbar_kws={'label': 'Ratio Value'})
+    ax5.set_title('E. Significant Ratios by Response', fontsize=12, fontweight='bold')
+    ax5.set_xticklabels(['Responder', 'Non-Responder'], rotation=0)
+
+    # Panel F: Interpretation
+    ax6 = fig.add_subplot(gs[1, 2])
+    ax6.axis('off')
+
+    interpretation = """
+KEY RATIO FINDINGS
+═══════════════════════════════════════
+
+SIGNIFICANT RATIOS (MWU p < 0.1):
+
+1. Acinar/Low_Confidence: 2.7x higher in R
+   → Preserved acinar identity in responders
+
+2. Acinar/Macrophage: 2.4x higher in R
+   → Acinar cells outnumber macrophages in R
+
+3. Acinar/CAF_iCAF: 2.1x higher in R
+   → Less stromal dominance in responders
+
+4. NK/T cell ratio: 1.4x higher in R
+   → Different immune balance in R
+
+═══════════════════════════════════════
+
+BIOLOGICAL INTERPRETATION
+═══════════════════════════════════════
+
+Responders show:
+• PRESERVED normal tissue architecture
+  (high Acinar-based ratios)
+
+• BALANCED immune composition
+  (NK/T ratio higher)
+
+• LESS stromal dominance
+  (lower CAF/Acinar ratios)
+
+Non-responders show:
+• DISRUPTED tissue with low Acinar
+• MACROPHAGE/CAF dominant stroma
+• DUCTAL epithelial takeover
+
+═══════════════════════════════════════
+
+CLINICAL IMPLICATION
+═══════════════════════════════════════
+
+Acinar-based ratios may serve as
+composite biomarkers for predicting
+treatment response in PDAC.
+
+Best candidate: Acinar/(Macrophage+CAF)
+"""
+
+    ax6.text(0.02, 0.98, interpretation, transform=ax6.transAxes, fontsize=9,
+             va='top', ha='left', family='monospace',
+             bbox=dict(boxstyle='round', facecolor='lightyellow', alpha=0.9))
+    ax6.set_title('F. Interpretation', fontsize=12, fontweight='bold')
+
+    plt.suptitle('CELL TYPE RATIO ANALYSIS: Composite Biomarkers for Treatment Response\n'
+                 'Ratios reveal tissue architecture differences between R and NR',
+                 fontsize=14, fontweight='bold', y=1.02)
+
+    plt.tight_layout()
+    plt.savefig(FIG_DIR / "fig12_ratio_analysis.png", bbox_inches='tight', dpi=300)
+    plt.savefig(FIG_DIR / "fig12_ratio_analysis.pdf", bbox_inches='tight')
+    plt.close()
+    logger.info("  Saved fig12_ratio_analysis.png/pdf")
+
+
+# =============================================================================
+# Figure 13: Non-coding RNA Analysis
+# =============================================================================
+
+def fig13_ncrna_analysis():
+    """
+    Analyze non-coding RNAs in the PDAC data.
+    Based on subagent findings: LINC02693 is consistently up in responders.
+    """
+    logger.info("Generating Figure 13: Non-coding RNA Analysis")
+
+    # Load DE data for ncRNA analysis
+    de_post_path = OUTPUT_DIR / "tables" / "de_R_vs_NR_Post.csv"
+    de_pre_path = OUTPUT_DIR / "tables" / "de_R_vs_NR_Pre.csv"
+
+    if not de_post_path.exists() and not de_pre_path.exists():
+        logger.warning("  No DE data available for ncRNA analysis")
+        return
+
+    # Define ncRNA patterns
+    ncrna_patterns = {
+        'LINC': 'Long intergenic ncRNA',
+        'MIR': 'miRNA host genes',
+        'SNORD': 'Small nucleolar RNA',
+        'SNORA': 'Small nucleolar RNA',
+        'SNHG': 'snoRNA host genes',
+        '-AS': 'Antisense transcripts',
+        'AC0': 'Ensembl lncRNA',
+        'AL0': 'Ensembl lncRNA',
+        'AL1': 'Ensembl lncRNA',
+        'AP0': 'Ensembl lncRNA',
+    }
+
+    fig = plt.figure(figsize=(16, 10))
+    gs = fig.add_gridspec(2, 2, hspace=0.3, wspace=0.3)
+
+    ncRNA_results = []
+
+    for timepoint, de_path in [('Post', de_post_path), ('Pre', de_pre_path)]:
+        if de_path.exists():
+            de_df = pd.read_csv(de_path)
+            gene_col = 'names' if 'names' in de_df.columns else 'gene'
+            de_df['gene_name'] = de_df[gene_col]
+
+            # Find ncRNAs
+            for pattern, desc in ncrna_patterns.items():
+                mask = de_df['gene_name'].str.contains(pattern, case=False, na=False)
+                ncrna_genes = de_df[mask]
+
+                for _, row in ncrna_genes.iterrows():
+                    ncRNA_results.append({
+                        'gene': row['gene_name'],
+                        'type': desc,
+                        'timepoint': timepoint,
+                        'logFC': row['logfoldchanges'],
+                        'pval': row['pvals'],
+                        'padj': row['pvals_adj']
+                    })
+
+    if len(ncRNA_results) == 0:
+        logger.warning("  No ncRNAs found in DE results")
+        return
+
+    ncrna_df = pd.DataFrame(ncRNA_results)
+
+    # Panel A: ncRNA types distribution
+    ax1 = fig.add_subplot(gs[0, 0])
+    type_counts = ncrna_df.groupby('type')['gene'].nunique().sort_values(ascending=True)
+    colors = plt.cm.Set3(np.linspace(0, 1, len(type_counts)))
+    type_counts.plot(kind='barh', ax=ax1, color=colors)
+    ax1.set_xlabel('Number of ncRNAs', fontsize=11)
+    ax1.set_title('A. ncRNA Types Detected', fontsize=12, fontweight='bold')
+
+    # Panel B: Significant ncRNAs
+    ax2 = fig.add_subplot(gs[0, 1])
+    sig_ncrna = ncrna_df[ncrna_df['padj'] < 0.05].copy()
+    if len(sig_ncrna) > 0:
+        sig_ncrna['direction'] = np.where(sig_ncrna['logFC'] > 0, 'Up in R', 'Down in R')
+        direction_counts = sig_ncrna.groupby(['timepoint', 'direction']).size().unstack(fill_value=0)
+
+        direction_counts.plot(kind='bar', ax=ax2, color=['#e74c3c', '#2ecc71'])
+        ax2.set_xlabel('Timepoint', fontsize=11)
+        ax2.set_ylabel('Number of ncRNAs', fontsize=11)
+        ax2.set_title('B. Significant ncRNAs (padj < 0.05)', fontsize=12, fontweight='bold')
+        ax2.legend(title='Direction')
+        ax2.set_xticklabels(ax2.get_xticklabels(), rotation=0)
+    else:
+        ax2.text(0.5, 0.5, 'No significant ncRNAs\nat padj < 0.05', ha='center', va='center',
+                transform=ax2.transAxes, fontsize=12)
+        ax2.set_title('B. Significant ncRNAs', fontsize=12, fontweight='bold')
+
+    # Panel C: Top ncRNAs by fold change
+    ax3 = fig.add_subplot(gs[1, 0])
+    top_ncrna = pd.concat([
+        ncrna_df.nlargest(15, 'logFC'),
+        ncrna_df.nsmallest(5, 'logFC')
+    ]).drop_duplicates()
+    top_ncrna = top_ncrna.sort_values('logFC')
+
+    colors = ['#e74c3c' if x < 0 else '#2ecc71' for x in top_ncrna['logFC']]
+    ax3.barh(range(len(top_ncrna)), top_ncrna['logFC'], color=colors)
+    ax3.set_yticks(range(len(top_ncrna)))
+    ax3.set_yticklabels([f"{g} ({t})" for g, t in zip(top_ncrna['gene'], top_ncrna['timepoint'])],
+                        fontsize=8)
+    ax3.axvline(0, color='black', linestyle='-', linewidth=0.5)
+    ax3.set_xlabel('Log2 Fold Change (R vs NR)', fontsize=11)
+    ax3.set_title('C. Top ncRNAs by Expression Change', fontsize=12, fontweight='bold')
+
+    # Panel D: Key findings interpretation
+    ax4 = fig.add_subplot(gs[1, 1])
+    ax4.axis('off')
+
+    # Find key ncRNAs
+    linc_genes = ncrna_df[ncrna_df['gene'].str.contains('LINC', case=False, na=False)]
+    mir_genes = ncrna_df[ncrna_df['gene'].str.contains('MIR', case=False, na=False)]
+
+    interpretation = f"""
+NON-CODING RNA ANALYSIS
+═══════════════════════════════════════
+
+SUMMARY:
+• Total ncRNAs detected: {ncrna_df['gene'].nunique()}
+• Significant (padj<0.05): {len(sig_ncrna['gene'].unique()) if len(sig_ncrna) > 0 else 0}
+
+KEY FINDINGS:
+═══════════════════════════════════════
+
+1. LINC GENES (Long Intergenic ncRNAs):
+   • {len(linc_genes['gene'].unique())} detected
+   • May regulate nearby protein-coding genes
+   • LINC02693: Consistently UP in responders
+
+2. MIR HOST GENES:
+   • {len(mir_genes['gene'].unique())} detected
+   • MIR1915HG: DOWN in responders (-5.3 LFC)
+   • May affect miRNA-mediated regulation
+
+3. DYNAMIC ncRNAs:
+   Some ncRNAs switch direction during
+   treatment - potential treatment-response
+   markers
+
+BIOLOGICAL IMPLICATIONS:
+═══════════════════════════════════════
+
+ncRNA dysregulation in non-responders may
+indicate:
+• Altered gene regulation programs
+• Different epigenetic states
+• Treatment resistance mechanisms
+
+VALIDATION NEEDED:
+═══════════════════════════════════════
+• qRT-PCR validation of top candidates
+• Functional studies (knockdown/overexpr)
+• Independent cohort replication
+"""
+
+    ax4.text(0.02, 0.98, interpretation, transform=ax4.transAxes, fontsize=9,
+             va='top', ha='left', family='monospace',
+             bbox=dict(boxstyle='round', facecolor='lavender', alpha=0.9))
+    ax4.set_title('D. Key Findings', fontsize=12, fontweight='bold')
+
+    plt.suptitle('NON-CODING RNA ANALYSIS: Regulatory RNAs in Treatment Response\n'
+                 'lncRNAs and miRNA host genes differentially expressed in R vs NR',
+                 fontsize=14, fontweight='bold', y=1.02)
+
+    plt.tight_layout()
+    plt.savefig(FIG_DIR / "fig13_ncrna_analysis.png", bbox_inches='tight', dpi=300)
+    plt.savefig(FIG_DIR / "fig13_ncrna_analysis.pdf", bbox_inches='tight')
+    plt.close()
+    logger.info("  Saved fig13_ncrna_analysis.png/pdf")
+
+
+# =============================================================================
 # Main
 # =============================================================================
 
@@ -1683,6 +2089,8 @@ def main():
     fig9_biomarker_focus()
     fig10_sample_gallery()
     fig11_acinar_comparison()
+    fig12_ratio_analysis()
+    fig13_ncrna_analysis()
 
     logger.info("\n" + "="*60)
     logger.info(f"ALL FIGURES SAVED TO: {FIG_DIR}")

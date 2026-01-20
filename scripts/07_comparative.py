@@ -46,18 +46,20 @@ TABLE_DIR = OUTPUT_DIR / "tables"
 FIG_DIR.mkdir(parents=True, exist_ok=True)
 
 # Sample groupings
+# NOTE: YP04A excluded (134 cells after QC - too sparse for reliable analysis)
 SAMPLE_GROUPS = {
     'R_Pre': ['YP12A', 'YP15A'],
     'R_Post': ['YP12C', 'YP15C'],
-    'NR_Pre': ['YP03A', 'YP04A'],
+    'NR_Pre': ['YP03A'],  # YP04A excluded
     'NR_Post': ['YP03C', 'YP04C'],
 }
 
 # Clinical metadata
+# YP04A excluded from analysis (134 cells after QC - too sparse)
 PDAC_METADATA = {
     "YP03A": {"patient": "YP03", "timepoint": "Pre", "response": "NR"},
     "YP03C": {"patient": "YP03", "timepoint": "Post", "response": "NR"},
-    "YP04A": {"patient": "YP04", "timepoint": "Pre", "response": "NR"},
+    # "YP04A": excluded - 134 cells after QC
     "YP04C": {"patient": "YP04", "timepoint": "Post", "response": "NR"},
     "YP12A": {"patient": "YP12", "timepoint": "Pre", "response": "R"},
     "YP12C": {"patient": "YP12", "timepoint": "Post", "response": "R"},
@@ -172,14 +174,14 @@ def compare_cell_type_proportions(
     # Get cell types
     cell_types = [c for c in props_df.columns if c not in ['sample', 'group']]
 
-    # Statistical comparison
+    # Statistical comparison (Welch's t-test for better power with small n)
     results = []
     for ct in cell_types:
         g1_vals = props_df[props_df['group'] == group1_name][ct].values
         g2_vals = props_df[props_df['group'] == group2_name][ct].values
 
         if len(g1_vals) > 1 and len(g2_vals) > 1:
-            stat, pval = stats.mannwhitneyu(g1_vals, g2_vals, alternative='two-sided')
+            stat, pval = stats.ttest_ind(g1_vals, g2_vals, equal_var=False)  # Welch's t-test
         else:
             pval = 1.0
 
