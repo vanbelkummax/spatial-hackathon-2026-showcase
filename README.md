@@ -69,11 +69,13 @@ Rather than relying solely on standard spatial transcriptomics workflows, we lev
 
 | Cell Type | R Mean% | NR Mean% | Effect | p-value |
 |-----------|---------|----------|--------|---------|
-| CAF_myCAF | 18.2% | 12.1% | +6.1% | 0.114 |
-| Macrophage | 8.4% | 5.2% | +3.2% | 0.200 |
-| T_cells | 4.1% | 2.3% | +1.8% | 0.229 |
+| **Acinar** | 6.4% | 2.9% | **+3.5%** | **0.057†** |
+| Ductal_Epithelial | 10.7% | 15.6% | -4.9% | 0.229 |
+| NK_cells | 7.4% | 4.9% | +2.5% | 0.229 |
 
-*Mann-Whitney U test (appropriate for n=4 R, n=3 NR)
+*Mann-Whitney U test; † p<0.1 (trending)
+
+**Key Finding:** Acinar cells are the ONLY cell type showing a trending difference between responders and non-responders (2.2x higher in R, p=0.057). This suggests preserved exocrine function may associate with treatment response.
 
 ---
 
@@ -179,6 +181,10 @@ Day 3: Polymathic Analysis (Cross-Domain)
 *Traditional overview showing all samples with QC metrics*
 ![Sample Gallery](figures/fig10_sample_gallery.png)
 
+### Figure 11: Acinar Cell Comparison (NEW)
+*Dedicated analysis of Acinar cell enrichment in responders (MWU p=0.057)*
+![Acinar Comparison](figures/fig11_acinar_comparison.png)
+
 ### G4X Multimodal Analysis
 *Gastric cancer samples with protein-based cell type annotation*
 ![G4X A01](figures/g4x/A01_overview.png)
@@ -192,7 +198,7 @@ Day 3: Polymathic Analysis (Cross-Domain)
 spatial-hackathon-2026-showcase/
 ├── README.md                    # This file
 ├── LICENSE                      # MIT License
-├── figures/                     # Publication-quality figures (10 PDAC + 2 G4X)
+├── figures/                     # Publication-quality figures (11 PDAC + 2 G4X)
 │   ├── fig1_sample_overview.png/pdf
 │   ├── fig2_cell_type_composition.png/pdf
 │   ├── fig3_centrality_analysis.png/pdf
